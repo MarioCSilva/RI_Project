@@ -16,10 +16,7 @@ class Menu:
         """)
 
     def run(self):
-        print("here")
         self.indexer.file_parsing()
-        print("here")
-
         self.indexer.print_indexer()
         self.indexer.print_postings()
 
