@@ -25,7 +25,6 @@ class Indexer:
 		next(reviews_file)
 
 		for paragraph in reviews_file:
-			print("as")
 			paragraph = paragraph[0].split("\t")
 			review_id, review_headline, review_body, product_title = \
 			paragraph[2], paragraph[-3], paragraph[-2], paragraph[5]
@@ -37,7 +36,7 @@ class Indexer:
 			for token in tokens:
 				self.indexer[token] += 1
 				self.postings[token].add(review_id)
-		
+
 	def print_indexer(self):
 		print(self.indexer)
 	
