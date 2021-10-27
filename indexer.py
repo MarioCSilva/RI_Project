@@ -2,49 +2,50 @@ import csv
 import re
 import nltk
 from collections import defaultdict
-from nltk.stem import PorterStemmer
+from tokenizer import Tokenizer
 
-tsv_file = open("amazon_reviews.tsv")
-reviews_file = csv.reader(tsv_file, delimiter="\n")
 
-# ignore headers
-next(reviews_file)
+class Indexer:
+	def __init__(self, file_name="amazon_reviews.tsv"):
+		self.file_name = file_name
 
-# global variables
-STOP_FILTER = False
+		# data structures
+		self.indexer = defaultdict(lambda: 0)
+		self.postings = defaultdict(lambda: set())
 
-# regex normalizer
-rgx = re.compile("(\w[\w']*\w|\w)")
+		# init tokenizer
+		self.tokenizer = Tokenizer()
 
-# white list words
-WHITE_LIST = []
+		STOP_FILTER = False
+	
+	def file_parsing(self):
+		tsv_file = open(self.file_name)
+		reviews_file = csv.reader(tsv_file, delimiter="\n")
+		# ignore headers
+		next(reviews_file)
 
-# set of stop words
-STOP_WORDS = set()
-stopwords_file = open("stopwords.txt")
-for line in stopwords_file:
-	STOP_WORDS |= set(line.split(","))
-print(STOP_WORDS)
+		for paragraph in reviews_file:
+			print("as")
+			paragraph = paragraph[0].split("\t")
+			review_id, review_headline, review_body, product_title = \
+			paragraph[2], paragraph[-3], paragraph[-2], paragraph[5]
+		
+			input_string = review_headline + review_body + product_title
 
-# porter stemmer
-ps = PorterStemmer()
+			tokens = self.tokenizer.tokenize(input_string)
 
-# data structures
-indexer = defaultdict(lambda: 0)
-postings = defaultdict(lambda: set())
+			for token in tokens:
+				self.indexer[token] += 1
+				self.postings[token].add(review_id)
+		
+	def print_indexer(self):
+		print(self.indexer)
+	
+	def print_postings(self):
+		print(self.postings)
 
-for paragraph in reviews_file:
-	paragraph = paragraph[0].lower().split("\t")
-	review_id, review_headline, review_body, product_title = \
-	paragraph[2], paragraph[-3], paragraph[-2], paragraph[5]
- 
-	# tokenizer
- 	# split into words
-	phrase = review_headline + review_body + product_title
-	tokens = rgx.findall(phrase)
-
-	tokens_no_sw = [ps.stem(word) for word in tokens if not word in STOP_WORDS]
-
-	for token in tokens_no_sw:
-		indexer[token] += 1
-		postings[token].add(review_id)
+if __name__ == "__main__":
+	indexer = Indexer()
+	print("here -")
+	indexer.file_parsing()
+	print("here -")
