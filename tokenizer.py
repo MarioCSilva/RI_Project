@@ -1,5 +1,7 @@
 import re
 from nltk.stem.snowball import SnowballStemmer
+import logging
+
 '''
 i.A minimum length filterthat removes tokens with less than a defaultnumber of characters.
 Allow the user todisable the filter orset another value;
@@ -19,7 +21,7 @@ class Tokenizer:
         self.init_min_len_filter(length=min_length)
         self.init_porter_filter()
         self.init_stop_words_filter(stopwords_file=stopwords_file)
-        
+
         # regex normalizer
         self.rgx = re.compile("(\w[\w']*\w|\w)")
 
@@ -48,17 +50,17 @@ class Tokenizer:
         # TODO: ver isto melhor
         input_normalized = re.sub("[^0-9a-zA-Z'_-]+"," ", input_string).lower()
         tokens = self.rgx.findall(input_string)
-    
+
         if self.porter_filter:
             return [
                 self.ps.stem(word) for word in tokens
-                if (not self.min_length_filter or len(word) > self.min_length)
+                if (not self.min_length_filter or len(word) >= self.min_length)
                 and (not self.stop_words_filter or word not in self.stop_words)
             ]
 
         return [
                 word for word in tokens \
-                if (not self.min_length_filter or len(word) > self.min_length)
+                if (not self.min_length_filter or len(word) >= self.min_length)
                 and (not self.stop_words_filter or word not in self.stop_words)
             ]
 

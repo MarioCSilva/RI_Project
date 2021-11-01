@@ -4,12 +4,14 @@ import nltk
 from collections import defaultdict
 from tokenizer import Tokenizer
 import psutil
+import logging
+
 
 class Indexer:
 	def __init__(self, file_name="amazon_reviews.tsv", min_length_filter=False,\
 		min_len=None, porter_filter=False, stop_words_filter=False,\
 		stopwords_file='stop_words.txt'):
-
+		logging.info(f"Indexer")
 		self.file_name = file_name
 
 		# data structures
@@ -26,6 +28,7 @@ class Indexer:
 		self.block_id = 0
 
 		self.POSTINGS_DIR = './posting_blocks/'
+		self.PARTITION_DIR = './partition_index/'
 
 		# current number of stored tokens
 		self.num_stored_tokens = 0
@@ -33,10 +36,18 @@ class Indexer:
 		# maximum number of tokens's postings stored in memory
 		self.MAX_TOKENS_PER_CHUNK = 1000000
 
+		# parse file and then index terms and postings
+		self.parse_and_index()
 
-	def parse_file(self):
-		tsv_file = open(self.file_name)
-		reviews_file = csv.reader(tsv_file, delimiter="\n")
+		# merge all block files
+		self.merge_blocks()
+
+		# delete all temporary block files
+		self.clear_blocks()
+
+
+	def parse_and_index(self):
+		reviews_file = csv.reader(open(self.file_name), delimiter="\n")
 		# ignore headers
 		next(reviews_file)
 
@@ -45,13 +56,15 @@ class Indexer:
 			review_id, review_headline, review_body = \
 				paragraph[2], paragraph[-3], paragraph[-2]
 		
-			input_string = review_headline + review_body
+			input_string = f"{review_headline} {review_body}"
 
 			tokens = self.tokenizer.tokenize(input_string)
 
 			self.index_tokens(document_id=review_id, tokens=tokens)
 
-		self.merge_blocks()
+		# last chunk is not being written to disk, thus the function is called again
+		if self.postings:
+			self.block_write_setup()
 
 
 	def has_available_ram(self) -> bool:
@@ -69,18 +82,20 @@ class Indexer:
 			self.postings[token].add(document_id)
 
 			if self.has_passed_chunk_limit():
-				# out of available memory
-				# sort terms and write current block to disk
-				sorted_terms = self.sort_terms(self.postings)
-				output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt"
+				self.block_write_setup()
+	
 
-				print(f"Writing new block with id {self.block_id}")
-				self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file)
+	def block_write_setup(self):
+		# out of available memory
+		# sort terms and write current block to disk
+		sorted_terms = self.sort_terms(self.postings)
+		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt"
 
-				self.postings = defaultdict(lambda: set())
-				self.block_id+=1
+		logging.info(f"Writing new block with id {self.block_id}")
+		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file)
 
-		#TODO: Currently last chunk is not being written to disk
+		self.postings = defaultdict(lambda: set())
+		self.block_id+=1
 
 
 	def sort_terms(self, postings_dict):
@@ -106,8 +121,6 @@ class Indexer:
 
 		last_term = ""
 
-		print(len(block_files))
-
 		while len(block_files) > 0:
 			# get smaller element in alphabet
 			min_ind = block_postings.index(min(block_postings))
@@ -117,15 +130,10 @@ class Indexer:
 			# write partition of postings to disk when
 			# finds a new term and passed the limit
 			if last_term != term and self.has_passed_chunk_limit():
-				sorted_terms = self.sort_terms(merge_postings)
-				first_word, last_word = sorted_terms[0][0], sorted_terms[-1][0]
-				partition_file = f"{self.POSTINGS_DIR}{first_word}-{last_word}.txt"
-
-				self.write_block_to_disk(sorted_terms=sorted_terms, output_file=partition_file)
-
+				self.block_merge_setup(merge_postings)
 				# reset temporary postings
 				merge_postings = defaultdict(lambda: set())
-			
+
 			self.num_stored_tokens += len(posting)
 			merge_postings[term] |= posting
 
@@ -140,13 +148,26 @@ class Indexer:
 				block_files[min_ind].close()
 				block_files.pop(min_ind)
 				block_postings.pop(min_ind)
-				print(len(block_files))
 
-		#TODO: Currently last postings are not being written to disk
+		# Last postings are not being written to disk, thus the function is called again
+		if merge_postings:
+			self.block_merge_setup(merge_postings)
 
 
-	def print_indexer(self):
-		print(self.indexer)
+	def clear_blocks(self):
+		block_files_dir = os.listdir(self.POSTINGS_DIR)
+		block_files = [ filename for filename in block_files_dir]
+		temp = block_files
+		for f in temp:
+			logging.info(f"Removing block {f}")
+			os.remove(f"{self.POSTINGS_DIR}{f}")
 
-	def print_postings(self):
-		print(self.postings)
+
+	def block_merge_setup(self, merge_postings):
+		sorted_terms = self.sort_terms(merge_postings)
+		first_word, last_word = sorted_terms[0][0], sorted_terms[-1][0]
+		partition_file = f"{self.PARTITION_DIR}{first_word}-{last_word}.txt"
+
+		logging.info(f"Writing partition from word {first_word} to {last_word}")
+
+		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=partition_file)
