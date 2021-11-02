@@ -49,7 +49,7 @@ class Tokenizer:
     def tokenize(self, input_string) -> list():
         # TODO: ver isto melhor
         input_normalized = re.sub("[^0-9a-zA-Z'_-]+"," ", input_string).lower()
-        tokens = self.rgx.findall(input_string)
+        tokens = self.rgx.findall(input_normalized)
 
         if self.porter_filter:
             return [
