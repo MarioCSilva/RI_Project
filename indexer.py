@@ -112,9 +112,8 @@ class Indexer:
 
 	def merge_blocks(self):
 		block_files_dir = os.listdir(self.POSTINGS_DIR)
-		block_files = [open(self.POSTINGS_DIR+filename) for filename in block_files_dir]
+		block_files = [open(self.POSTINGS_DIR+filename) for filename in block_files_dir if filename != ".gitkeep"]
 		block_postings = [block_file.readline()[:-1] for block_file in block_files]
-		
 		self.num_stored_tokens = 0
 
 		merge_postings = defaultdict(lambda: set())
@@ -125,6 +124,7 @@ class Indexer:
 			# get smaller element in alphabet
 			min_ind = block_postings.index(min(block_postings))
 			line_posting = block_postings[min_ind].split('  ')
+
 			term, posting = line_posting[0], eval(line_posting[1])
 
 			# write partition of postings to disk when
