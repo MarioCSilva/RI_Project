@@ -6,6 +6,7 @@ from tokenizer import Tokenizer
 import psutil
 import logging
 import gzip
+import time
 
 
 class Indexer:
@@ -13,6 +14,8 @@ class Indexer:
 		min_len=None, porter_filter=False, stop_words_filter=False,\
 		stopwords_file='stop_words.txt'):
 		logging.info(f"Indexer")
+		start_index_time = time.time()
+		
 		self.file_name = file_name
 
 		# data structures
@@ -55,6 +58,24 @@ class Indexer:
 		# store indexer data structure in a file
 		self.store_indexer()
 
+		end_index_time = time.time()
+		total_index_time = end_index_time -start_index_time
+
+		self.get_statistics(total_index_time)
+
+
+	def get_statistics(self, total_index_time):
+		block_files_dir = os.listdir(self.PARTITION_DIR)
+		files_size = sum([os.path.getsize(f"{self.PARTITION_DIR}{f}") for  f in block_files_dir])
+
+		logging.info(f"a) Total indexing time: {total_index_time:.5f} seconds")
+
+		logging.info(f"b) Total index size on disk: {files_size:.5f} Bs == {9.5e-07*files_size:.3f} MBs")
+
+		logging.info(f"c) Vocabulary size: {len(self.indexer)}")
+
+		logging.info(f"d) Number of temporary index segments written to disk: {self.block_id}")
+
 
 	def check_dir_exist(self, directories):
 		for diretory in directories:
@@ -63,7 +84,8 @@ class Indexer:
 
 
 	def parse_and_index(self):
-		reviews_file = csv.reader(open(self.file_name), delimiter="\n")
+		data_set = open(self.file_name)
+		reviews_file = csv.reader(data_set, delimiter="\n")
 		# ignore headers
 		next(reviews_file)
 
@@ -78,16 +100,15 @@ class Indexer:
 
 			self.index_tokens(document_id=review_id, tokens=tokens)
 
+		data_set.close()
+
 		# last chunk is not being written to disk, thus the function is called again
 		if self.postings:
 			self.block_write_setup()
 
 
 	def has_available_ram(self) -> bool:
-		# TODO:
-		x = self.python_process.memory_percent()
-		print(x)
-		return x <= 0.02
+		return self.python_process.memory_percent() <= 0.6
 
 
 	def has_passed_chunk_limit(self) -> bool:
@@ -103,7 +124,7 @@ class Indexer:
 
 			if self.has_passed_chunk_limit():
 				self.block_write_setup()
-	
+
 
 	def block_write_setup(self):
 		# out of available memory
@@ -115,7 +136,7 @@ class Indexer:
 		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file)
 
 		self.postings = defaultdict(lambda: set())
-		self.block_id+=1
+		self.block_id += 1
 
 
 	def sort_terms(self, postings_dict):
@@ -134,7 +155,7 @@ class Indexer:
 		block_files_dir = os.listdir(self.POSTINGS_DIR)
 		block_files = [gzip.open(self.POSTINGS_DIR+filename, 'rt') for filename in block_files_dir]
 		block_postings = [block_file.readline()[:-1] for block_file in block_files]
-		
+
 		self.num_stored_tokens = 0
 
 		merge_postings = defaultdict(lambda: set())

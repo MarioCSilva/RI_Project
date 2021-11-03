@@ -6,12 +6,13 @@ from search_engine import Search_Engine
 
 class Main:
     def __init__(self):
-        self.indexer = Indexer(*self.check_arguments())
-        
-        if self.text_to_search != '':
-            print(self.text_to_search)
-            # self.search_engine = Search_Engine(self.index_dir)
-            # self.search_engine.search(self.text_to_search)
+        indexer_args = self.check_arguments()
+
+        if not self.search:
+            self.indexer = Indexer(*indexer_args)
+        else:
+            self.search_engine = Search_Engine(self.index_dir)
+            self.search_engine.search()
 
 
     def usage(self):
@@ -32,20 +33,19 @@ class Main:
         arg_parser.add_argument('-length', nargs=1, type=int)
         arg_parser.add_argument('-porter', action='store_true')
         arg_parser.add_argument('-stopwords', action='store_true')
-        arg_parser.add_argument('-sf', nargs=1,  default=['stop_words.txt'])
-        arg_parser.add_argument('-text_to_search', nargs=1,  default=[''])
-
+        arg_parser.add_argument('-path_stopwords', nargs=1,  default=['stop_words.txt'])
+        arg_parser.add_argument('-search', action='store_true')
 
         args = arg_parser.parse_args()
 
+        self.search = args.search
         self.index_dir = args.index_dir[0]
         file_name = args.file_name[0]
         if self.index_dir == "":
-            self.index_dir = file_name
+            self.index_dir = file_name.split('.')[0]
         min_len = args.length[0] if args.min_length and args.length else None
-        self.text_to_search = args.text_to_search[0]
 
-        return self.index_dir, file_name, args.min_length, min_len, args.porter, args.stopwords, args.sf[0]
+        return self.index_dir, file_name, args.min_length, min_len, args.porter, args.stopwords, args.path_stopwords[0]
 
 
 if __name__ == "__main__":
