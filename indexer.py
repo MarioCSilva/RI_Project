@@ -5,11 +5,11 @@ from collections import defaultdict
 from tokenizer import Tokenizer
 import psutil
 import logging
+import gzip
 
 
 class Indexer:
-	#TODO: Read files compressed and not in plain text, way faster
-	def __init__(self, file_name="amazon_reviews.tsv", min_length_filter=False,\
+	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
 		min_len=None, porter_filter=False, stop_words_filter=False,\
 		stopwords_file='stop_words.txt'):
 		logging.info(f"Indexer")
@@ -28,8 +28,14 @@ class Indexer:
 		# block id
 		self.block_id = 0
 
-		self.POSTINGS_DIR = './posting_blocks/'
-		self.PARTITION_DIR = './partition_index/'
+		self.DATASET_DIR = file_name.split('.')[0]
+		self.POSTINGS_DIR = f"./{self.DATASET_DIR}/posting_blocks/"
+		self.PARTITION_DIR = f"./{self.DATASET_DIR}/partition_index/"
+		self.INDEXER_DIR = f"./{self.DATASET_DIR}/indexer_dict/"
+		
+		dir_list = [self.DATASET_DIR, self.POSTINGS_DIR,\
+			self.PARTITION_DIR, self.INDEXER_DIR]
+		self.check_dir_exist(dir_list)
 
 		# current number of stored tokens
 		self.num_stored_tokens = 0
@@ -45,6 +51,15 @@ class Indexer:
 
 		# delete all temporary block files
 		self.clear_blocks()
+
+		# store indexer data structure in a file
+		self.store_indexer()
+
+
+	def check_dir_exist(self, directories):
+		for diretory in directories:
+			if not os.path.exists(diretory):
+				os.mkdir(diretory)
 
 
 	def parse_and_index(self):
@@ -69,11 +84,15 @@ class Indexer:
 
 
 	def has_available_ram(self) -> bool:
-		return self.python_process.memory_percent() <= 0.4
+		# TODO:
+		x = self.python_process.memory_percent()
+		print(x)
+		return x <= 0.02
 
 
 	def has_passed_chunk_limit(self) -> bool:
-		return self.num_stored_tokens >= self.MAX_TOKENS_PER_CHUNK
+		return self.num_stored_tokens >= self.MAX_TOKENS_PER_CHUNK \
+			and not self.has_available_ram()
 
 
 	def index_tokens(self, document_id:str, tokens:str):
@@ -90,7 +109,7 @@ class Indexer:
 		# out of available memory
 		# sort terms and write current block to disk
 		sorted_terms = self.sort_terms(self.postings)
-		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt"
+		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt.gz"
 
 		logging.info(f"Writing new block with id {self.block_id}")
 		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file)
@@ -103,8 +122,8 @@ class Indexer:
 		return sorted(postings_dict.items(), key = lambda x: x[0])
 
 
-	def write_block_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt'):
-		with open(output_file,'w+') as f:
+	def write_block_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz'):
+		with gzip.open(output_file,'wt') as f:
 			for term, postings in sorted_terms:
 				f.write(term + '  ' + str(postings) + '\n')
 
@@ -113,8 +132,9 @@ class Indexer:
 
 	def merge_blocks(self):
 		block_files_dir = os.listdir(self.POSTINGS_DIR)
-		block_files = [open(self.POSTINGS_DIR+filename) for filename in block_files_dir if filename != ".gitkeep"]
+		block_files = [gzip.open(self.POSTINGS_DIR+filename, 'rt') for filename in block_files_dir]
 		block_postings = [block_file.readline()[:-1] for block_file in block_files]
+		
 		self.num_stored_tokens = 0
 
 		merge_postings = defaultdict(lambda: set())
@@ -125,7 +145,6 @@ class Indexer:
 			# get smaller element in alphabet
 			min_ind = block_postings.index(min(block_postings))
 			line_posting = block_postings[min_ind].split('  ')
-
 			term, posting = line_posting[0], eval(line_posting[1])
 
 			# write partition of postings to disk when
@@ -167,8 +186,15 @@ class Indexer:
 	def block_merge_setup(self, merge_postings):
 		sorted_terms = self.sort_terms(merge_postings)
 		first_word, last_word = sorted_terms[0][0], sorted_terms[-1][0]
-		partition_file = f"{self.PARTITION_DIR}{first_word}-{last_word}.txt"
+		partition_file = f"{self.PARTITION_DIR}{first_word}-{last_word}.txt.gz"
 
 		logging.info(f"Writing partition from word {first_word} to {last_word}")
 
 		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=partition_file)
+
+
+	def store_indexer(self):
+		with gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz",'wt') as f:
+			for term, freq in self.indexer.items():
+				f.write(term + '  ' + str(freq) + '\n')
+
