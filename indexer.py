@@ -8,6 +8,7 @@ import logging
 
 
 class Indexer:
+	#TODO: Read files compressed and not in plain text, way faster
 	def __init__(self, file_name="amazon_reviews.tsv", min_length_filter=False,\
 		min_len=None, porter_filter=False, stop_words_filter=False,\
 		stopwords_file='stop_words.txt'):
