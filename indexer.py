@@ -28,12 +28,12 @@ class Indexer:
 		# block id
 		self.block_id = 0
 
-		self.DATASET_DIR = file_name.split('.')[0]
-		self.POSTINGS_DIR = f"./{self.DATASET_DIR}/posting_blocks/"
-		self.PARTITION_DIR = f"./{self.DATASET_DIR}/partition_index/"
-		self.INDEXER_DIR = f"./{self.DATASET_DIR}/indexer_dict/"
+		self.INDEX_DIR = index_dir
+		self.POSTINGS_DIR = f"./{self.INDEX_DIR}/posting_blocks/"
+		self.PARTITION_DIR = f"./{self.INDEX_DIR}/partition_index/"
+		self.INDEXER_DIR = f"./{self.INDEX_DIR}/indexer_dict/"
 		
-		dir_list = [self.DATASET_DIR, self.POSTINGS_DIR,\
+		dir_list = [self.INDEX_DIR, self.POSTINGS_DIR,\
 			self.PARTITION_DIR, self.INDEXER_DIR]
 		self.check_dir_exist(dir_list)
 
