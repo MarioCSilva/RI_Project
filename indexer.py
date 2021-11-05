@@ -7,7 +7,7 @@ import psutil
 import logging
 import gzip
 import time
-
+from map_reducer import MapReducer
 
 class Indexer:
 	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
@@ -45,7 +45,11 @@ class Indexer:
 
 		# maximum number of tokens's postings stored in memory
 		self.MAX_TOKENS_PER_CHUNK = 1000000
+		logging.info("Starting Map Reducer")
+		self.mapper = MapReducer(self.map_function, self.reduce_function)
 
+		self.parse_and_index2(self)
+		'''
 		# parse file and then index terms and postings
 		self.parse_and_index()
 
@@ -62,6 +66,72 @@ class Indexer:
 		total_index_time = end_index_time -start_index_time
 
 		self.get_statistics(total_index_time)
+		'''
+
+
+	def map_function(self, document) -> list:
+		document_id, text = document[0], document[1]
+
+		output = []
+
+		tokens = self.tokenizer.tokenize(text)
+
+		x = defaultdict(lambda: defaultdict(int))
+
+		for token in tokens:
+			x[token][document_id] += 1
+			output.append( (token, document_id, 1) )
+
+		return output
+
+		#mapper ->
+		#term -> doc_id, 1 doc_id  1, ... -> doc_id 5
+		#term -> doc_id2, 3
+
+		#partioner -> term -> [14], [doc_id, doc_id2]
+
+		#reducer -> term -> 7, term -> [doc_id, doc_id2]
+
+	def reduce_function(self, item) -> tuple:
+		#doc_id, term, occurances = item
+		#[doc_1 palavra 1]
+		#[doc_1 palavra 1]
+		#[doc_2 chico 1]
+		#[doc_1 coco 1]
+
+		
+
+
+		return (doc_id, term, sum(occurances))
+
+
+	def parse_and_index2(self):
+		data_set = open(self.file_name)
+		reviews_file = csv.reader(data_set, delimiter="\n")
+		# ignore headers
+		next(reviews_file)
+		input_documents = []
+
+		for paragraph in reviews_file:
+			paragraph = paragraph[0].split("\t")
+			review_id, review_headline, review_body = \
+				paragraph[2], paragraph[-3], paragraph[-2]
+		
+			input_string = f"{review_headline} {review_body}"
+
+			input_documents.append( (review_id, input_string) )
+
+			# ideally should be only ram but the constant monitoring of ram usage
+			# by this process in python slows the process itself by a lot
+			if len(input_documents) > 1000 and self.has_available_ram():
+				logging.info("mapper called")
+				x = self.mapper(input_documents)
+				logging.info(x)
+				input_documents = []
+
+		data_set.close()
+
+		return input_documents
 
 
 	def get_statistics(self, total_index_time):
