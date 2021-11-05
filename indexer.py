@@ -8,6 +8,7 @@ import logging
 import gzip
 import time
 from map_reducer import MapReducer
+from functools import partial
 
 class Indexer:
 	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
@@ -19,8 +20,8 @@ class Indexer:
 		self.file_name = file_name
 
 		# data structures
-		self.indexer = defaultdict(lambda: 0)
-		self.postings = defaultdict(lambda: set())
+		self.indexer = defaultdict(int)
+		self.postings = defaultdict(set)
 
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
@@ -46,9 +47,9 @@ class Indexer:
 		# maximum number of tokens's postings stored in memory
 		self.MAX_TOKENS_PER_CHUNK = 1000000
 		logging.info("Starting Map Reducer")
-		self.mapper = MapReducer(self.map_function, self.reduce_function)
+		self.mapper = MapReducer(self.tokenizer)
 
-		self.parse_and_index2(self)
+		self.parse_and_index2()
 		'''
 		# parse file and then index terms and postings
 		self.parse_and_index()
@@ -69,42 +70,6 @@ class Indexer:
 		'''
 
 
-	def map_function(self, document) -> list:
-		document_id, text = document[0], document[1]
-
-		output = []
-
-		tokens = self.tokenizer.tokenize(text)
-
-		x = defaultdict(lambda: defaultdict(int))
-
-		for token in tokens:
-			x[token][document_id] += 1
-			output.append( (token, document_id, 1) )
-
-		return output
-
-		#mapper ->
-		#term -> doc_id, 1 doc_id  1, ... -> doc_id 5
-		#term -> doc_id2, 3
-
-		#partioner -> term -> [14], [doc_id, doc_id2]
-
-		#reducer -> term -> 7, term -> [doc_id, doc_id2]
-
-	def reduce_function(self, item) -> tuple:
-		#doc_id, term, occurances = item
-		#[doc_1 palavra 1]
-		#[doc_1 palavra 1]
-		#[doc_2 chico 1]
-		#[doc_1 coco 1]
-
-		
-
-
-		return (doc_id, term, sum(occurances))
-
-
 	def parse_and_index2(self):
 		data_set = open(self.file_name)
 		reviews_file = csv.reader(data_set, delimiter="\n")
@@ -116,17 +81,19 @@ class Indexer:
 			paragraph = paragraph[0].split("\t")
 			review_id, review_headline, review_body = \
 				paragraph[2], paragraph[-3], paragraph[-2]
-		
+
 			input_string = f"{review_headline} {review_body}"
 
 			input_documents.append( (review_id, input_string) )
-
 			# ideally should be only ram but the constant monitoring of ram usage
 			# by this process in python slows the process itself by a lot
-			if len(input_documents) > 1000 and self.has_available_ram():
+			if len(input_documents) > 20000 and self.has_available_ram():
 				logging.info("mapper called")
-				x = self.mapper(input_documents)
-				logging.info(x)
+
+				processed_documents = self.mapper(input_documents)
+
+				self.block_write_setup2(processed_documents)
+
 				input_documents = []
 
 		data_set.close()
@@ -136,6 +103,7 @@ class Indexer:
 
 	def get_statistics(self, total_index_time):
 		block_files_dir = os.listdir(self.PARTITION_DIR)
+
 		files_size = sum([os.path.getsize(f"{self.PARTITION_DIR}{f}") for  f in block_files_dir])
 
 		logging.info(f"a) Total indexing time: {total_index_time:.5f} seconds")
@@ -196,6 +164,31 @@ class Indexer:
 				self.block_write_setup()
 
 
+	def block_write_setup2(self, processed_documents):
+		# sort terms and write current block to disk
+		
+		sorted_terms = self.sort_terms2(processed_documents)
+		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt.gz"
+
+		logging.info(f"Writing new block with id {self.block_id}")
+		self.write_block_to_disk2(sorted_terms=sorted_terms, output_file=output_file)
+
+		self.postings = defaultdict(lambda: set())
+		self.block_id += 1
+
+	def write_block_to_disk2(self, sorted_terms, output_file='./posting_blocks/block.txt.gz'):
+		with gzip.open(output_file,'wt') as f:
+			for proc_doc in sorted_terms:
+				term, postings, num_occ = proc_doc
+				self.indexer[term] += num_occ
+				f.write(term + '  ' + str(postings) + '\n')
+
+
+	def sort_terms2(self, processed_documents):
+		return sorted(processed_documents, key = lambda x: x[0])
+
+	
+
 	def block_write_setup(self):
 		# out of available memory
 		# sort terms and write current block to disk
@@ -212,7 +205,7 @@ class Indexer:
 	def sort_terms(self, postings_dict):
 		return sorted(postings_dict.items(), key = lambda x: x[0])
 
-
+	
 	def write_block_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz'):
 		with gzip.open(output_file,'wt') as f:
 			for term, postings in sorted_terms:
