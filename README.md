@@ -59,6 +59,5 @@ e) 0.04935026168823242 seconds
 
 # TODO:
 ver pq é q a ram n diminui logo a seguir da escrita -> na proxima aula
-meter distribuido -> azure
 apontar para a linha q esta o termo no dict -> po proximo trabalho apenas
 guardar posicoes dos termos -> po proximo trabalho apenas

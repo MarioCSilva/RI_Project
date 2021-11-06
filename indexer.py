@@ -9,11 +9,12 @@ import gzip
 import time
 from map_reducer import MapReducer
 from functools import partial
+import pickle
 
 class Indexer:
 	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
 		min_len=None, porter_filter=False, stop_words_filter=False,\
-		stopwords_file='stop_words.txt'):
+		stopwords_file='stop_words.txt', map_reducer=False):
 		logging.info(f"Indexer")
 		start_index_time = time.time()
 		
@@ -21,7 +22,7 @@ class Indexer:
 
 		# data structures
 		self.indexer = defaultdict(int)
-		self.postings = defaultdict(set)
+		self.postings = defaultdict(lambda: defaultdict(list))
 
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
@@ -29,6 +30,7 @@ class Indexer:
 
 		# get process
 		self.python_process = psutil.Process(os.getpid())
+
 		# block id
 		self.block_id = 0
 
@@ -41,17 +43,20 @@ class Indexer:
 			self.PARTITION_DIR, self.INDEXER_DIR]
 		self.check_dir_exist(dir_list)
 
-		# current number of stored tokens
-		self.num_stored_tokens = 0
+		# current number of stored_chunks
+		self.num_stored_items = 0
 
 		# maximum number of tokens's postings stored in memory
-		self.MAX_TOKENS_PER_CHUNK = 1000000
-		logging.info("Starting Map Reducer")
-		self.mapper = MapReducer(self.tokenizer)
+		self.MAX_CHUNK_LIMIT = 1800000
+		# maximum number of documents for map reduce to handle
+		self.MAX_DOCS_LIMIT = 15000
 
-		self.parse_and_index2()
-		'''
-		# parse file and then index terms and postings
+		self.map_reducer = map_reducer
+		if map_reducer:
+			logging.info("Starting Map Reducer")
+			self.map_reducer = MapReducer(tokenizer=self.tokenizer)
+
+		# parse file and index terms and postings
 		self.parse_and_index()
 
 		# merge all block files
@@ -67,38 +72,6 @@ class Indexer:
 		total_index_time = end_index_time -start_index_time
 
 		self.get_statistics(total_index_time)
-		'''
-
-
-	def parse_and_index2(self):
-		data_set = open(self.file_name)
-		reviews_file = csv.reader(data_set, delimiter="\n")
-		# ignore headers
-		next(reviews_file)
-		input_documents = []
-
-		for paragraph in reviews_file:
-			paragraph = paragraph[0].split("\t")
-			review_id, review_headline, review_body = \
-				paragraph[2], paragraph[-3], paragraph[-2]
-
-			input_string = f"{review_headline} {review_body}"
-
-			input_documents.append( (review_id, input_string) )
-			# ideally should be only ram but the constant monitoring of ram usage
-			# by this process in python slows the process itself by a lot
-			if len(input_documents) > 20000 and self.has_available_ram():
-				logging.info("mapper called")
-
-				processed_documents = self.mapper(input_documents)
-
-				self.block_write_setup2(processed_documents)
-
-				input_documents = []
-
-		data_set.close()
-
-		return input_documents
 
 
 	def get_statistics(self, total_index_time):
@@ -122,10 +95,13 @@ class Indexer:
 
 
 	def parse_and_index(self):
-		data_set = open(self.file_name)
+		data_set = open(self.file_name, encoding='utf-8')
 		reviews_file = csv.reader(data_set, delimiter="\n")
 		# ignore headers
 		next(reviews_file)
+		input_documents = []
+
+		logging.info("Parsing File")
 
 		for paragraph in reviews_file:
 			paragraph = paragraph[0].split("\t")
@@ -134,94 +110,96 @@ class Indexer:
 		
 			input_string = f"{review_headline} {review_body}"
 
-			tokens = self.tokenizer.tokenize(input_string)
+			if self.map_reducer:
+				self.num_stored_items += 1
+				input_documents.append( (review_id, input_string) )
 
-			self.index_tokens(document_id=review_id, tokens=tokens)
+				if self.has_passed_chunk_limit(True):
+					processed_documents = self.map_reducer(input_documents)
+					input_documents = []
+					self.block_write_setup(processed_documents, True)
+			else:
+				tokens = self.tokenizer.tokenize(input_string)
+				self.index_tokens(document_id=review_id, tokens=tokens)
+
+				if self.has_passed_chunk_limit():
+					self.block_write_setup() 
 
 		data_set.close()
 
 		# last chunk is not being written to disk, thus the function is called again
-		if self.postings:
-			self.block_write_setup()
+		if self.num_stored_items != 0:
+			self.call_map_reducer(input_documents) if self.map_reducer \
+			else self.block_write_setup()
+
+		if self.map_reducer:
+			self.map_reducer.close_proc()
+
+
+	def call_map_reducer(self, input_documents):
+		processed_documents = self.map_reducer(input_documents)
+		self.block_write_setup(processed_documents, True)
 
 
 	def has_available_ram(self) -> bool:
-		return self.python_process.memory_percent() <= 0.6
+		return self.python_process.memory_percent() <= 1
 
 
-	def has_passed_chunk_limit(self) -> bool:
-		return self.num_stored_tokens >= self.MAX_TOKENS_PER_CHUNK \
-			and not self.has_available_ram()
+	def has_passed_chunk_limit(self, map_red_index=False) -> bool:
+		# ideally should be only ram but the constant monitoring of ram usage
+		# by this process in python slows the process itself by a lot
+		if map_red_index:
+			return self.num_stored_items >= self.MAX_DOCS_LIMIT and not self.has_available_ram()
+		return self.num_stored_items >= self.MAX_CHUNK_LIMIT and not self.has_available_ram()
 
 
-	def index_tokens(self, document_id:str, tokens:str):
-		for token in tokens:
-			self.num_stored_tokens += 1
+	def index_tokens(self, document_id:str, tokens):
+		for token, index in tokens:
 			self.indexer[token] += 1
-			self.postings[token].add(document_id)
-
-			if self.has_passed_chunk_limit():
-				self.block_write_setup()
+			self.postings[token][document_id].append(index)
+			self.num_stored_items += 1
 
 
-	def block_write_setup2(self, processed_documents):
+	def sort_terms(self, postings_lst):
+		return sorted(postings_lst, key = lambda x: x[0])
+
+
+	def write_block_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz', map_red_index=False):
+		with gzip.open(output_file,'wt') as f:
+			if map_red_index:
+				for term, postings, num_occ in sorted_terms:
+					self.indexer[term] += num_occ
+					f.write(term + '  ' + str(postings) + '\n')
+			else:
+				for term, postings in sorted_terms:
+					f.write(term + '  ' + str(postings) + '\n')
+
+
+	def block_write_setup(self, processed_documents=None, map_red_index=False):
+		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt.gz"
+		logging.info(f"Writing new block with id {self.block_id}")
+
 		# sort terms and write current block to disk
+		if processed_documents:
+			sorted_terms = self.sort_terms(processed_documents)
+		else:
+			sorted_terms = self.sort_terms(self.postings.items())
+			self.postings = defaultdict(lambda: defaultdict(list))
+
+		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file, map_red_index=map_red_index)
+
+		self.num_stored_items = 0
+		self.block_id += 1
 		
-		sorted_terms = self.sort_terms2(processed_documents)
-		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt.gz"
-
-		logging.info(f"Writing new block with id {self.block_id}")
-		self.write_block_to_disk2(sorted_terms=sorted_terms, output_file=output_file)
-
-		self.postings = defaultdict(lambda: set())
-		self.block_id += 1
-
-	def write_block_to_disk2(self, sorted_terms, output_file='./posting_blocks/block.txt.gz'):
-		with gzip.open(output_file,'wt') as f:
-			for proc_doc in sorted_terms:
-				term, postings, num_occ = proc_doc
-				self.indexer[term] += num_occ
-				f.write(term + '  ' + str(postings) + '\n')
-
-
-	def sort_terms2(self, processed_documents):
-		return sorted(processed_documents, key = lambda x: x[0])
-
-	
-
-	def block_write_setup(self):
-		# out of available memory
-		# sort terms and write current block to disk
-		sorted_terms = self.sort_terms(self.postings)
-		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt.gz"
-
-		logging.info(f"Writing new block with id {self.block_id}")
-		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file)
-
-		self.postings = defaultdict(lambda: set())
-		self.block_id += 1
-
-
-	def sort_terms(self, postings_dict):
-		return sorted(postings_dict.items(), key = lambda x: x[0])
-
-	
-	def write_block_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz'):
-		with gzip.open(output_file,'wt') as f:
-			for term, postings in sorted_terms:
-				f.write(term + '  ' + str(postings) + '\n')
-
-		self.num_stored_tokens = 0
-
 
 	def merge_blocks(self):
 		block_files_dir = os.listdir(self.POSTINGS_DIR)
 		block_files = [gzip.open(self.POSTINGS_DIR+filename, 'rt') for filename in block_files_dir]
 		block_postings = [block_file.readline()[:-1] for block_file in block_files]
 
-		self.num_stored_tokens = 0
+		self.num_stored_items = 0
 
-		merge_postings = defaultdict(lambda: set())
+		merge_postings = defaultdict(lambda: defaultdict(list))
 
 		last_term = ""
 
@@ -229,6 +207,7 @@ class Indexer:
 			# get smaller element in alphabet
 			min_ind = block_postings.index(min(block_postings))
 			line_posting = block_postings[min_ind].split('  ')
+			line_posting[1] = 'defaultdict(list, ' + line_posting[1][28:]
 			term, posting = line_posting[0], eval(line_posting[1])
 
 			# write partition of postings to disk when
@@ -236,10 +215,11 @@ class Indexer:
 			if last_term != term and self.has_passed_chunk_limit():
 				self.block_merge_setup(merge_postings)
 				# reset temporary postings
-				merge_postings = defaultdict(lambda: set())
+				merge_postings = defaultdict(lambda: defaultdict(list))
 
-			self.num_stored_tokens += len(posting)
-			merge_postings[term] |= posting
+			#TODO: change this len to something else probably
+			self.num_stored_items += len(posting)
+			merge_postings[term].update(posting)
 
 			# store last term
 			last_term = term
@@ -268,13 +248,14 @@ class Indexer:
 
 
 	def block_merge_setup(self, merge_postings):
-		sorted_terms = self.sort_terms(merge_postings)
+		sorted_terms = self.sort_terms(merge_postings.items())
 		first_word, last_word = sorted_terms[0][0], sorted_terms[-1][0]
 		partition_file = f"{self.PARTITION_DIR}{first_word}-{last_word}.txt.gz"
 
 		logging.info(f"Writing partition from word {first_word} to {last_word}")
 
 		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=partition_file)
+		self.num_stored_items = 0
 
 
 	def store_indexer(self):

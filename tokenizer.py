@@ -47,20 +47,18 @@ class Tokenizer:
 
 
     def tokenize(self, input_string) -> list():
-        # TODO: ver isto melhor
-        input_normalized = re.sub("[^0-9a-zA-Z'_-]+"," ", input_string).lower()
-        tokens = self.rgx.findall(input_normalized)
+        final_tokens = []
 
-        if self.porter_filter:
-            return [
-                self.ps.stem(word) for word in tokens
-                if (not self.min_length_filter or len(word) >= self.min_length)
-                and (not self.stop_words_filter or word not in self.stop_words)
-            ]
+        words = input_string.split(' ')
+        for index, word in enumerate(words):
+            word_normalized  = re.sub("[^0-9a-zA-Z'_-]+"," ", word).lower()
+            tokens = self.rgx.findall(word_normalized)
 
-        return [
-                word for word in tokens \
-                if (not self.min_length_filter or len(word) >= self.min_length)
-                and (not self.stop_words_filter or word not in self.stop_words)
-            ]
-
+            for token in tokens:
+                if (not self.min_length_filter or len(word) >= self.min_length) \
+                and (not self.stop_words_filter or word not in self.stop_words):
+                    if self.porter_filter:
+                        final_tokens.append((self.ps.stem(token), index))
+                    else:
+                        final_tokens.append((token, index))
+        return final_tokens

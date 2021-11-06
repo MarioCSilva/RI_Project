@@ -41,7 +41,6 @@ class Search_Engine:
 			term, freq = indexer_line[0], indexer_line[1]
 			self.indexer[term] = freq
 
-
 	def search_text(self):
 		while True:
 			query = input("Search for anything (q to quit): ")
