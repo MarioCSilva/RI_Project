@@ -41,8 +41,6 @@ python3 main.py
 
 
 # TODO:
-meter distribuido -> azure, permitir indexar mais docs
-estatisticas
+estatisticas pos outros data sets e com map reduce
 apontar para a linha q esta o termo no dict
 ver a condicao de memoria melhor
-guardar posicoes dos termos -> po proximo trabalho apenas
