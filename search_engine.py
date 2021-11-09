@@ -12,7 +12,7 @@ class Search_Engine:
 
 		self.INDEXER_DIR = f"./{indexer_dir}/indexer_dict/"
 
-		self.indexer = defaultdict(int)
+		self.indexer = defaultdict(lambda: [0, 0])
 
 		self.load_indexer()
 		
@@ -38,8 +38,10 @@ class Search_Engine:
 
 		for line in indexer_file:
 			indexer_line = line[:-1].split('  ')
-			term, freq = indexer_line[0], indexer_line[1]
-			self.indexer[term] = freq
+			term, freq_pos = indexer_line[0], indexer_line[1]
+			self.indexer[term][0] = freq_pos[0]
+			self.indexer[term][1] = freq_pos[1]
+
 
 	def search_text(self):
 		while True:

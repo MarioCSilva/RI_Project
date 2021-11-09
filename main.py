@@ -19,7 +19,8 @@ class Main:
         print("Usage: python3 main.py \n\t-i <Directory name for indexation:str>\
             \n\t-f <File Name for data set:str> \n\t-m <Minimum Length Filter>\
             \n\t-l <Length for Minimum Length Filter:int> \n\t-p <Porter Stemmer Filter>\
-            \n\t-s <Stop Words Filter>\n\t -sf <Stop Words File> \n\t-mp <Map Reduce>")
+            \n\t-stopwords <Stop Words Filter>\n\t -sf <Stop Words File> \n\t-mp <Map Reduce>\
+            \n\t-search <Search Engine>")
 
 
     def check_arguments(self):

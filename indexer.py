@@ -21,7 +21,7 @@ class Indexer:
 		self.file_name = file_name
 
 		# data structures
-		self.indexer = defaultdict(int)
+		self.indexer = defaultdict(lambda: [0, 0])
 		self.postings = defaultdict(lambda: defaultdict(list))
 
 		# init tokenizer
@@ -155,7 +155,7 @@ class Indexer:
 
 	def index_tokens(self, document_id:str, tokens):
 		for token, index in tokens:
-			self.indexer[token] += 1
+			self.indexer[token][0] += 1
 			self.postings[token][document_id].append(index)
 			self.num_stored_items += 1
 
@@ -168,10 +168,13 @@ class Indexer:
 		with gzip.open(output_file,'wt') as f:
 			if map_red_index:
 				for term, postings, num_occ in sorted_terms:
-					self.indexer[term] += num_occ
+					self.indexer[term][0] += num_occ
 					f.write(term + '  ' + str(postings) + '\n')
 			else:
+				line = 0
 				for term, postings in sorted_terms:
+					line += 1
+					self.indexer[term][1] = line
 					f.write(term + '  ' + str(postings) + '\n')
 
 
@@ -260,6 +263,6 @@ class Indexer:
 
 	def store_indexer(self):
 		with gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz",'wt') as f:
-			for term, freq in self.indexer.items():
-				f.write(term + '  ' + str(freq) + '\n')
+			for term, freq_pos in self.indexer.items():
+				f.write(term + '  ' + str(freq_pos[0]) + '  ' + str(freq_pos[1]) + '\n')
 
