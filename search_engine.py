@@ -38,10 +38,9 @@ class Search_Engine:
 
 		for line in indexer_file:
 			indexer_line = line[:-1].split('  ')
-			term, freq_pos = indexer_line[0], indexer_line[1]
-			self.indexer[term][0] = freq_pos[0]
-			self.indexer[term][1] = freq_pos[1]
-
+			term = indexer_line[0]
+			self.indexer[term][0], self.indexer[term][1] = \
+				indexer_line[1], indexer_line[2]
 
 	def search_text(self):
 		while True:

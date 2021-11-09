@@ -1,6 +1,4 @@
-import csv
 import os
-import nltk
 from collections import defaultdict
 from tokenizer import Tokenizer
 import psutil
@@ -8,8 +6,7 @@ import logging
 import gzip
 import time
 from map_reducer import MapReducer
-from functools import partial
-import pickle
+
 
 class Indexer:
 	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
@@ -95,20 +92,17 @@ class Indexer:
 
 
 	def parse_and_index(self):
-		data_set = open(self.file_name, encoding='utf-8')
-		reviews_file = csv.reader(data_set, delimiter="\n")
+		data_set = open(self.file_name, 'r', encoding='utf-8')
 		# ignore headers
-		next(reviews_file)
+		data_set.readline()
 		input_documents = []
 
 		logging.info("Parsing File")
 
-		for paragraph in reviews_file:
-			paragraph = paragraph[0].split("\t")
-			review_id, review_headline, review_body = \
-				paragraph[2], paragraph[-3], paragraph[-2]
-		
-			input_string = f"{review_headline} {review_body}"
+		for paragraph in data_set:
+			paragraph = paragraph.split("\t")
+			review_id, input_string = paragraph[2],\
+				f"{paragraph[-3]} {paragraph[-2]}"
 
 			if self.map_reducer:
 				self.num_stored_items += 1
@@ -126,7 +120,6 @@ class Indexer:
 					self.block_write_setup() 
 
 		data_set.close()
-
 		# last chunk is not being written to disk, thus the function is called again
 		if self.num_stored_items != 0:
 			self.call_map_reducer(input_documents) if self.map_reducer \
@@ -153,7 +146,7 @@ class Indexer:
 		return self.num_stored_items >= self.MAX_CHUNK_LIMIT and not self.has_available_ram()
 
 
-	def index_tokens(self, document_id:str, tokens):
+	def index_tokens(self, document_id, tokens):
 		for token, index in tokens:
 			self.indexer[token][0] += 1
 			self.postings[token][document_id].append(index)
@@ -169,13 +162,13 @@ class Indexer:
 			if map_red_index:
 				for term, postings, num_occ in sorted_terms:
 					self.indexer[term][0] += num_occ
-					f.write(term + '  ' + str(postings) + '\n')
+					f.write(f"{term}  {str(postings)}\n")
 			else:
 				line = 0
 				for term, postings in sorted_terms:
 					line += 1
 					self.indexer[term][1] = line
-					f.write(term + '  ' + str(postings) + '\n')
+					f.write(f"{term}  {str(postings)}\n")
 
 
 	def block_write_setup(self, processed_documents=None, map_red_index=False):
@@ -188,7 +181,6 @@ class Indexer:
 		else:
 			sorted_terms = self.sort_terms(self.postings.items())
 			self.postings = defaultdict(lambda: defaultdict(list))
-
 		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file, map_red_index=map_red_index)
 
 		self.num_stored_items = 0
@@ -199,7 +191,6 @@ class Indexer:
 		block_files_dir = os.listdir(self.POSTINGS_DIR)
 		block_files = [gzip.open(self.POSTINGS_DIR+filename, 'rt') for filename in block_files_dir]
 		block_postings = [block_file.readline()[:-1] for block_file in block_files]
-
 		self.num_stored_items = 0
 
 		merge_postings = defaultdict(lambda: defaultdict(list))
@@ -221,7 +212,7 @@ class Indexer:
 				merge_postings = defaultdict(lambda: defaultdict(list))
 
 			#TODO: change this len to something else probably
-			self.num_stored_items += len(posting)
+			self.num_stored_items += self.indexer[term][0]
 			merge_postings[term].update(posting)
 
 			# store last term
@@ -264,5 +255,5 @@ class Indexer:
 	def store_indexer(self):
 		with gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz",'wt') as f:
 			for term, freq_pos in self.indexer.items():
-				f.write(term + '  ' + str(freq_pos[0]) + '  ' + str(freq_pos[1]) + '\n')
+				f.write(f"{term}  {str(freq_pos[0])}  {str(freq_pos[1])}\n")
 

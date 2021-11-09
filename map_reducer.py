@@ -1,20 +1,19 @@
 import logging
-from multiprocessing import Queue, Process
+from multiprocessing import Queue, Process, Manager
 from collections import defaultdict
 from functools import partial
-
 
 class MapReducer:
 	def __init__(self, tokenizer, num_workers=8) -> None:
 		self.num_workers = num_workers
 		# self.pool = multiprocessing.Pool(processes=num_workers)
 		self.tokenizer = tokenizer
-		self.map_q_in = Queue(1)
-		self.map_q_out = Queue()
+		self.map_q_in = Manager().Queue(1)
+		self.map_q_out = Manager().Queue()
 		self.map_proc = [Process(target=MapReducer.map_func, args=(self.map_q_in, self.map_q_out, self.tokenizer))
             for _ in range(self.num_workers)]
-		self.red_q_in = Queue(1)
-		self.red_q_out = Queue()
+		self.red_q_in = Manager().Queue(1)
+		self.red_q_out = Manager().Queue()
 		self.red_proc = [Process(target=MapReducer.reduce_func, args=(self.red_q_in, self.red_q_out))
             for _ in range(self.num_workers)]
 		for p in self.map_proc:
@@ -74,19 +73,12 @@ class MapReducer:
 			p.close()
 
 
-	def __call__(self, inputs, chunksize=1):
+	def __call__(self, inputs):
 		"""Process the inputs through the map and reduce functions given.
-
+		
 		inputs
-		  An iterable containing the input data to be processed.
-
-		chunksize=1
-		  The portion of the input data to hand to each worker.  This
-		  can be used to tune performance during the mapping phase.
+		  A list containing the input data to be processed.
 		"""
-		for doc in inputs:
-			self.map_q_in.put(doc)
-		self.map_q_in.put((None,None))
 		sent = [self.map_q_in.put(doc) for doc in inputs]
 		map_responses = [self.map_q_out.get() for _ in range(len(sent))]
 		# map_responses = self.pool.map(partial(MapReducer.map_func, tokenizer=self.tokenizer), inputs, chunksize=chunksize)
