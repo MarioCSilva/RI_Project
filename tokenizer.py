@@ -1,3 +1,4 @@
+from collections import defaultdict
 import re
 from nltk.stem.snowball import SnowballStemmer
 
@@ -46,7 +47,7 @@ class Tokenizer:
 
 
     def tokenize(self, input_string) -> list():
-        final_tokens = []
+        final_tokens = defaultdict(list)
 
         input_string  = re.sub("[^0-9a-zA-Z'_-]+"," ", input_string.lower())
         tokens = re.findall(self.rgx, input_string)
@@ -55,7 +56,7 @@ class Tokenizer:
             if (not self.min_length_filter or len(token) >= self.min_length) \
                 and (not self.stop_words_filter or token not in self.stop_words):
                     if self.porter_filter:
-                        final_tokens.append((self.ps.stem(token), index))
+                        final_tokens[self.ps.stem(token)].append(index)
                     else:
-                        final_tokens.append((token, index))
+                        final_tokens[token].append(index)
         return final_tokens

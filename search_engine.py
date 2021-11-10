@@ -42,6 +42,7 @@ class Search_Engine:
 			self.indexer[term][0], self.indexer[term][1] = \
 				indexer_line[1], indexer_line[2]
 
+
 	def search_text(self):
 		while True:
 			query = input("Search for anything (q to quit): ")

@@ -1,12 +1,12 @@
 import logging
-from multiprocessing import Queue, Process, Manager
+from multiprocessing import Queue, Process, Manager, Pool
 from collections import defaultdict
 from functools import partial
 
 class MapReducer:
 	def __init__(self, tokenizer, num_workers=8) -> None:
 		self.num_workers = num_workers
-		# self.pool = multiprocessing.Pool(processes=num_workers)
+		# self.pool = Pool(processes=num_workers)
 		self.tokenizer = tokenizer
 		self.map_q_in = Manager().Queue(1)
 		self.map_q_out = Manager().Queue()
@@ -37,6 +37,16 @@ class MapReducer:
 			for token, index in tokenizer.tokenize(text):
 				output[token][document_id].append(index)
 			q_out.put(output)
+	
+	# @staticmethod
+	# def map_func(document, tokenizer) -> list:
+	# 	document_id, text = document[0], document[1]
+
+	# 	output = defaultdict(partial(defaultdict, list))
+
+	# 	for index, token in enumerate(text.lower().split()):
+	# 		output[token][document_id].append(index)
+	# 	return output
 
 	# partition/shuffle
 	# {term: {doc_id_1: [2,3,4]}, {doc_id_2: [6,4]}}
@@ -59,31 +69,38 @@ class MapReducer:
 				break
 			q_out.put((term, doc_id_pos, sum(len(lst) for lst in doc_id_pos.values())))
 
+	@staticmethod
+	def reduce_func(partitioned_data) -> tuple:
+		term, doc_id_pos = partitioned_data
+		return (term, doc_id_pos, sum(len(lst) for lst in doc_id_pos.values()))
 
 	def close_proc(self):
+		logging.info('closing processes')
+		# self.pool.close()
+		# self.pool.join()
 		[self.map_q_in.put((None, None)) for _ in range(self.num_workers)]
 		[self.red_q_in.put((None, None)) for _ in range(self.num_workers)]
-		logging.info('closing processes')
 		for p in self.map_proc:
-			p.join()
 			p.close()
+			p.join()
 
 		for p in self.red_proc:
-			p.join()
 			p.close()
+			p.join()
 
 
 	def __call__(self, inputs):
 		"""Process the inputs through the map and reduce functions given.
-		
+
 		inputs
 		  A list containing the input data to be processed.
 		"""
 		sent = [self.map_q_in.put(doc) for doc in inputs]
 		map_responses = [self.map_q_out.get() for _ in range(len(sent))]
-		# map_responses = self.pool.map(partial(MapReducer.map_func, tokenizer=self.tokenizer), inputs, chunksize=chunksize)
+		# map_responses = self.pool.map(partial(MapReducer.map_func, tokenizer=self.tokenizer), inputs, chunksize=1)
+		logging.info("Mapping done")
 		partitioned_data = self.partition(map_responses)
-
+		logging.info("Partitioning done")
 		sent = [self.red_q_in.put(part_doc) for part_doc in partitioned_data]
 		reduced_values = [self.red_q_out.get() for _ in range(len(sent))]
 

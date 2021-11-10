@@ -11,7 +11,7 @@ from map_reducer import MapReducer
 class Indexer:
 	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
 		min_len=None, porter_filter=False, stop_words_filter=False,\
-		stopwords_file='stop_words.txt', map_reducer=False):
+		stopwords_file='stop_words.txt', map_reducer=False, positions=False):
 		logging.info(f"Indexer")
 		start_index_time = time.time()
 		
@@ -19,11 +19,14 @@ class Indexer:
 
 		# data structures
 		self.indexer = defaultdict(lambda: [0, 0])
+
 		self.postings = defaultdict(lambda: defaultdict(list))
 
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
 			stop_words_filter, stopwords_file)
+		
+		self.store_positions = positions
 
 		# get process
 		self.python_process = psutil.Process(os.getpid())
@@ -44,9 +47,9 @@ class Indexer:
 		self.num_stored_items = 0
 
 		# maximum number of tokens's postings stored in memory
-		self.MAX_CHUNK_LIMIT = 1800000
+		self.MAX_CHUNK_LIMIT = 2500000
 		# maximum number of documents for map reduce to handle
-		self.MAX_DOCS_LIMIT = 15000
+		self.MAX_DOCS_LIMIT = 500000
 
 		self.map_reducer = map_reducer
 		if map_reducer:
@@ -109,7 +112,10 @@ class Indexer:
 				input_documents.append( (review_id, input_string) )
 
 				if self.has_passed_chunk_limit(True):
+					logging.info("Sending data to map reducer")
 					processed_documents = self.map_reducer(input_documents)
+					logging.info("Got the processed data from map reducer")
+
 					input_documents = []
 					self.block_write_setup(processed_documents, True)
 			else:
@@ -130,26 +136,31 @@ class Indexer:
 
 
 	def call_map_reducer(self, input_documents):
+		logging.info("Sending data to map reducer")
 		processed_documents = self.map_reducer(input_documents)
+		logging.info("Got the processed data from map reducer")
 		self.block_write_setup(processed_documents, True)
 
 
 	def has_available_ram(self) -> bool:
-		return self.python_process.memory_percent() <= 1
+		return self.python_process.memory_percent() <= 2
 
 
 	def has_passed_chunk_limit(self, map_red_index=False) -> bool:
 		# ideally should be only ram but the constant monitoring of ram usage
 		# by this process in python slows the process itself by a lot
 		if map_red_index:
-			return self.num_stored_items >= self.MAX_DOCS_LIMIT and not self.has_available_ram()
-		return self.num_stored_items >= self.MAX_CHUNK_LIMIT and not self.has_available_ram()
+			return self.num_stored_items >= self.MAX_DOCS_LIMIT # and not self.has_available_ram()
+		return self.num_stored_items >= self.MAX_CHUNK_LIMIT # and not self.has_available_ram()
 
 
 	def index_tokens(self, document_id, tokens):
-		for token, index in tokens:
+		for token, positions in tokens.items():
 			self.indexer[token][0] += 1
-			self.postings[token][document_id].append(index)
+			if self.store_positions:
+				self.postings[token][document_id] = positions
+			else:
+				self.postings[token][document_id]
 			self.num_stored_items += 1
 
 
@@ -158,21 +169,30 @@ class Indexer:
 
 
 	def write_block_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz', map_red_index=False):
-		with gzip.open(output_file,'wt') as f:
+		with  gzip.open(output_file,'wt') as f:
 			if map_red_index:
 				for term, postings, num_occ in sorted_terms:
 					self.indexer[term][0] += num_occ
-					f.write(f"{term}  {str(postings)}\n")
+					f.write(f"{term}  {' '.join(postings)}\n")
 			else:
-				line = 0
 				for term, postings in sorted_terms:
-					line += 1
-					self.indexer[term][1] = line
-					f.write(f"{term}  {str(postings)}\n")
+					if self.store_positions:
+						f.write(f"{term}  {' '.join([f'{doc}:{pos}' for doc, pos in postings.items()])}\n")
+						continue
+					f.write(f"{term}  {' '.join(postings)}\n")
+
+
+	def write_partition_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz', map_red_index=False):
+		with open(output_file,'w+') as f:
+			line = 0
+			for term, postings in sorted_terms:
+				line += 1
+				self.indexer[term][1] = line
+				f.write(f"{term}  {postings}\n")
 
 
 	def block_write_setup(self, processed_documents=None, map_red_index=False):
-		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.txt.gz"
+		output_file = f"{self.POSTINGS_DIR}block_{self.block_id}.gz"
 		logging.info(f"Writing new block with id {self.block_id}")
 
 		# sort terms and write current block to disk
@@ -193,7 +213,7 @@ class Indexer:
 		block_postings = [block_file.readline()[:-1] for block_file in block_files]
 		self.num_stored_items = 0
 
-		merge_postings = defaultdict(lambda: defaultdict(list))
+		merge_postings = defaultdict(str)
 
 		last_term = ""
 
@@ -201,19 +221,18 @@ class Indexer:
 			# get smaller element in alphabet
 			min_ind = block_postings.index(min(block_postings))
 			line_posting = block_postings[min_ind].split('  ')
-			line_posting[1] = 'defaultdict(list, ' + line_posting[1][28:]
-			term, posting = line_posting[0], eval(line_posting[1])
+
+			term, postings = line_posting[0], line_posting[1]
 
 			# write partition of postings to disk when
 			# finds a new term and passed the limit
 			if last_term != term and self.has_passed_chunk_limit():
 				self.block_merge_setup(merge_postings)
 				# reset temporary postings
-				merge_postings = defaultdict(lambda: defaultdict(list))
+				merge_postings = defaultdict(str)
 
-			#TODO: change this len to something else probably
-			self.num_stored_items += self.indexer[term][0]
-			merge_postings[term].update(posting)
+			self.num_stored_items += 1
+			merge_postings[term] += postings
 
 			# store last term
 			last_term = term
@@ -244,11 +263,11 @@ class Indexer:
 	def block_merge_setup(self, merge_postings):
 		sorted_terms = self.sort_terms(merge_postings.items())
 		first_word, last_word = sorted_terms[0][0], sorted_terms[-1][0]
-		partition_file = f"{self.PARTITION_DIR}{first_word}-{last_word}.txt.gz"
+		partition_file = f"{self.PARTITION_DIR}{first_word}-{last_word}.txt"
 
 		logging.info(f"Writing partition from word {first_word} to {last_word}")
 
-		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=partition_file)
+		self.write_partition_to_disk(sorted_terms=sorted_terms, output_file=partition_file)
 		self.num_stored_items = 0
 
 
