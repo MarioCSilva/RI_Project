@@ -4,7 +4,7 @@ from collections import defaultdict
 from functools import partial
 
 class MapReducer:
-	def __init__(self, tokenizer, num_workers=8) -> None:
+	def __init__(self, tokenizer, num_workers=4) -> None:
 		self.num_workers = num_workers
 		# self.pool = Pool(processes=num_workers)
 		self.tokenizer = tokenizer
@@ -24,8 +24,8 @@ class MapReducer:
 			p.start()
 
 	# mapper
-	# [term, doc_id_1, [2,3,4]]
-	# [term, doc_id_2, [6,4]]
+	# {term:{ doc_id_1: [2,3,4] } }
+	# {term:{ doc_id_2: [6,4] } }
 	@staticmethod
 	def map_func(q_in, q_out, tokenizer) -> list:
 		while True:
@@ -33,9 +33,8 @@ class MapReducer:
 			if document_id is None and text is None:
 				break
 			output = defaultdict(partial(defaultdict, list))
-
-			for token, index in tokenizer.tokenize(text):
-				output[token][document_id].append(index)
+			for token, positions in tokenizer.tokenize(text).items():
+				output[token][document_id] = positions
 			q_out.put(output)
 	
 	# @staticmethod
@@ -67,26 +66,26 @@ class MapReducer:
 			term, doc_id_pos = q_in.get()
 			if term is None and doc_id_pos is None:
 				break
-			q_out.put((term, doc_id_pos, sum(len(lst) for lst in doc_id_pos.values())))
+			q_out.put((term, doc_id_pos, len(doc_id_pos.keys())))
 
-	@staticmethod
-	def reduce_func(partitioned_data) -> tuple:
-		term, doc_id_pos = partitioned_data
-		return (term, doc_id_pos, sum(len(lst) for lst in doc_id_pos.values()))
+	# @staticmethod
+	# def reduce_func(partitioned_data) -> tuple:
+	# 	term, doc_id_pos = partitioned_data
+	# 	return (term, doc_id_pos, len(doc_id_pos.keys()))
 
 	def close_proc(self):
 		logging.info('closing processes')
-		# self.pool.close()
 		# self.pool.join()
+		# self.pool.close()
 		[self.map_q_in.put((None, None)) for _ in range(self.num_workers)]
 		[self.red_q_in.put((None, None)) for _ in range(self.num_workers)]
 		for p in self.map_proc:
-			p.close()
 			p.join()
+			p.close()
 
 		for p in self.red_proc:
-			p.close()
 			p.join()
+			p.close()
 
 
 	def __call__(self, inputs):
@@ -103,6 +102,6 @@ class MapReducer:
 		logging.info("Partitioning done")
 		sent = [self.red_q_in.put(part_doc) for part_doc in partitioned_data]
 		reduced_values = [self.red_q_out.get() for _ in range(len(sent))]
-
+		logging.info("Reduction done")
 		# reduced_values = self.pool.map(MapReducer.reduce_func, partitioned_data)
 		return reduced_values
