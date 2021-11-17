@@ -6,10 +6,10 @@ import logging
 import gzip
 import time
 from map_reducer import MapReducer
-
+import sys
 
 class Indexer:
-	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
+	def __init__(self, index_dir, file_name="amazon_reviews_music.tsv", min_length_filter=False,\
 		min_len=None, porter_filter=False, stop_words_filter=False,\
 		stopwords_file='stop_words.txt', map_reducer=False, positions=False):
 		logging.info(f"Indexer")
@@ -48,7 +48,7 @@ class Indexer:
 		self.num_stored_items = 0
 
 		# maximum number of tokens's postings stored in memory
-		self.MAX_CHUNK_LIMIT = 1800000
+		self.MAX_CHUNK_LIMIT = 1000000
 		# maximum number of documents for map reduce to handle
 		self.MAX_DOCS_LIMIT = 100000
 
@@ -93,6 +93,10 @@ class Indexer:
 		for diretory in directories:
 			if not os.path.exists(diretory):
 				os.mkdir(diretory)
+			elif diretory == self.PARTITION_DIR:
+				if len(os.listdir(self.PARTITION_DIR)) > 0:
+					logging.info("Dataset has already been indexed.")
+					sys.exit()
 
 
 	def parse_and_index(self):
@@ -227,7 +231,7 @@ class Indexer:
 
 			# write partition of postings to disk when
 			# finds a new term and passed the limit
-			if last_term != term and self.has_passed_chunk_limit():
+			if last_term != term and self.has_passed_chunk_limit(True):
 				self.block_merge_setup(merge_postings)
 				# reset temporary postings
 				merge_postings = OrderedDict()
@@ -265,7 +269,7 @@ class Indexer:
 		#sorted_terms = self.sort_terms(merge_postings.items())
 		sorted_terms = list(merge_postings.items())
 		first_word, last_word = sorted_terms[0][0], sorted_terms[-1][0]
-		partition_file = f"{self.PARTITION_DIR}{first_word}-{last_word}.txt.gz"
+		partition_file = f"{self.PARTITION_DIR}{first_word} {last_word}.txt.gz"
 
 		logging.info(f"Writing partition from word {first_word} to {last_word}")
 

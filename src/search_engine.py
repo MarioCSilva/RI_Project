@@ -10,7 +10,7 @@ class Search_Engine:
 	def __init__(self, indexer_dir):
 		start_search_time = time.time()
 
-		self.INDEXER_DIR = f"./{indexer_dir}/indexer_dict/"
+		self.INDEXER_DIR = f"../{indexer_dir}/indexer_dict/"
 
 		self.indexer = defaultdict(lambda: [0, 0])
 
@@ -45,6 +45,7 @@ class Search_Engine:
 
 	def search_text(self):
 		while True:
+			print(len(self.indexer))
 			query = input("Search for anything (q to quit): ")
 			
 			if query == "q":

@@ -1,0 +1,15 @@
+site_name: Indexation and Search System
+repo_url: https://github.com/MarioCSilva/RI_project
+repo_name: Indexation and Search System
+
+theme:
+   name: material
+   palette:
+      primary: light blue
+      accent: light blue
+   features:
+    - navigation.instant
+    - navigation.top
+
+plugins:
+  - render_swagger

@@ -29,7 +29,7 @@ class Main:
             usage=self.usage
         )
         arg_parser.add_argument('-index_dir', nargs=1, default=[''])
-        arg_parser.add_argument('-file_name', nargs=1, default=['amazon_reviews.tsv'])
+        arg_parser.add_argument('-filename', nargs=1, default=['amazon_reviews_music.tsv'])
         arg_parser.add_argument('-min_length', action='store_true')
         arg_parser.add_argument('-length', nargs=1, type=int)
         arg_parser.add_argument('-porter', action='store_true')
@@ -44,12 +44,12 @@ class Main:
 
         self.search = args.search
         self.index_dir = args.index_dir[0]
-        file_name = args.file_name[0]
+        filename = args.filename[0]
         if self.index_dir == "":
-            self.index_dir = file_name.split('.')[0]
+            self.index_dir = filename.split('.')[0]
         min_len = args.length[0] if args.min_length and args.length else None
 
-        return self.index_dir, file_name, args.min_length, min_len, args.porter,\
+        return self.index_dir, filename, args.min_length, min_len, args.porter,\
             args.stopwords, args.stopwords_file[0], args.mp, args.positions
 
 

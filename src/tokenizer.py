@@ -49,7 +49,8 @@ class Tokenizer:
     def tokenize(self, input_string) -> list():
         final_tokens = defaultdict(list)
 
-        input_string = re.sub("[^0-9a-z'_-/]+"," ", input_string.lower())
+        # removes alone digits
+        input_string = re.sub("[0-9]+[^0-9a-z'_-]+"," ", input_string.lower())
         tokens = re.findall(self.rgx, input_string)
 
         for index, token in enumerate(tokens):
