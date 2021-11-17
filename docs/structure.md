@@ -42,18 +42,18 @@ This class will process the documents and return all terms found and the positio
 
     This stage collects all terms, the documents where those have appeared and its positions, and stores them in a dictionary of dictionaries as suggested bellow. This step is very important since it uses the tokenization function which can be a big CPU intensive function. Each mapping corresponds to the process of one document.
 
-``` python
+```
 { term: { doc_id_1: [2,3,4] } }
 { term: { doc_id_2: [6,4] } }
 ```
-    
-    This task is computed simultaneously by 4 processes that are launched with this goal. Each output is sent to the next stage, the partitioning.
+
+This task is computed simultaneously by 4 processes that are launched with this goal. Each output is sent to the next stage, the partitioning.
 
 - The Partioning stage:
     
     This stage will only be executed once all processes have done the mapping function over all documents and returned the mapped terms. The objective of this step is to organize the mapped values for the reducing step to use them, in this case, we will group all documents on a single entry (term), as suggested bellow:
 
-```python
+```
 { term: { doc_id_1: [2,3,4] }, { doc_id_2: [6,4] } }
 ```
 
@@ -61,7 +61,7 @@ This class will process the documents and return all terms found and the positio
 
     The final stage, the Reducing, aims to compute the total number of occurences of each term in all documents, by  organizing the data in the following structure.
 
-```python
+```
 ( term, { doc_id_1: [2,3,4] }, { doc_id_2: [6,4] }, 5)
 ```
 
