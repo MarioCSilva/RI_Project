@@ -54,7 +54,7 @@ This task is computed simultaneously by 4 processes that are launched with this 
     This stage will only be executed once all processes have done the mapping function over all documents and returned the mapped terms. The objective of this step is to organize the mapped values for the reducing step to use them, in this case, we will group all documents on a single entry (term), as suggested bellow:
 
 ```
-{ term: { doc_id_1: [2,3,4] }, { doc_id_2: [6,4] } }
+{ term: { doc_id_1: [2,3,4], doc_id_2: [6,4] } }
 ```
 
 - The Reducing Stage:
@@ -62,7 +62,7 @@ This task is computed simultaneously by 4 processes that are launched with this 
     The final stage, the Reducing, aims to compute the total number of occurences of each term in all documents, by  organizing the data in the following structure.
 
 ```
-( term, { doc_id_1: [2,3,4] }, { doc_id_2: [6,4] }, 5)
+( term, { doc_id_1: [2,3,4], doc_id_2: [6,4] }, 5)
 ```
 
 - Overhead - there is only benefict of using map reducing when the cost of transfering information from processes is much smaller to the processing that is executed in the functions of mapping and reducing. It also should be used in different machines and not in a single computer to take the most benefict out of it. In out case, the overhead of creating processes and data transfering between processes could be too big for the operations that are executed. However we will analyze the results on the Statistics part.
