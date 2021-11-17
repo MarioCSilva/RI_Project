@@ -1,5 +1,3 @@
-## Statistics
-
 a) Total indexing time. (No filters)
 
 b) Total index size on disk.
