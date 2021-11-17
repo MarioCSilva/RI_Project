@@ -54,7 +54,7 @@ This class will process the documents and return all terms found and the positio
     This stage will only be executed once all processes have done the mapping function over all documents and returned the mapped terms. The objective of this step is to organize the mapped values for the reducing step to use them, in this case, we will group all documents on a single entry (term), as suggested bellow:
 
     ```python
-    	{term: {doc_id_1: [2,3,4]}, {doc_id_2: [6,4]}}
+    {term: {doc_id_1: [2,3,4]}, {doc_id_2: [6,4]}}
     ```
 
 - The Reducing Stage:
