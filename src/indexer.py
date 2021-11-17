@@ -9,7 +9,7 @@ from map_reducer import MapReducer
 import sys
 
 class Indexer:
-	def __init__(self, index_dir, file_name="amazon_reviews_music.tsv", min_length_filter=False,\
+	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
 		min_len=None, porter_filter=False, stop_words_filter=False,\
 		stopwords_file='stop_words.txt', map_reducer=False, positions=False):
 		logging.info(f"Indexer")

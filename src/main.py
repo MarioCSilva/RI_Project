@@ -1,6 +1,7 @@
 from indexer import Indexer
 import argparse
 import logging
+import sys
 from search_engine import Search_Engine
 
 
@@ -16,11 +17,17 @@ class Main:
 
 
     def usage(self):
-        print("Usage: python3 main.py \n\t-i <Directory name for indexation:str>\
-            \n\t-f <File Name for data set:str> \n\t-m <Minimum Length Filter>\
-            \n\t-l <Length for Minimum Length Filter:int> \n\t-p <Porter Stemmer Filter>\
-            \n\t-stopwords <Stop Words Filter>\n\t -stopwords_file <Stop Words File> \n\t-mp <Map Reduce>\
-            \n\t-search <Search Engine>")
+        print("Usage: python3 main.py\
+            \n\t-i <Directory name for indexation:str>\
+            \n\t-f <File Name for data set:str>\
+            \n\t-m <Minimum Length Filter>\
+            \n\t-l <Length for Minimum Length Filter:int>\
+            \n\t-porter <Porter Stemmer Filter>\
+            \n\t-stopwords <Stop Words Filter>\
+            \n\t-stopwords_file <Stop Words File>\
+            \n\t-mp <Map Reduce>\
+            \n\t-search <Search Engine>\
+            \n\t-positions <Store term's positions in postings>")
 
 
     def check_arguments(self):
@@ -29,7 +36,7 @@ class Main:
             usage=self.usage
         )
         arg_parser.add_argument('-index_dir', nargs=1, default=[''])
-        arg_parser.add_argument('-filename', nargs=1, default=['amazon_reviews_music.tsv'])
+        arg_parser.add_argument('-filename', nargs=1, default=['amazon_reviews.tsv'])
         arg_parser.add_argument('-min_length', action='store_true')
         arg_parser.add_argument('-length', nargs=1, type=int)
         arg_parser.add_argument('-porter', action='store_true')
@@ -39,8 +46,11 @@ class Main:
         arg_parser.add_argument('-mp', action='store_true')
         arg_parser.add_argument('-positions', action='store_true')
 
-
-        args = arg_parser.parse_args()
+        try:
+            args = arg_parser.parse_args()
+        except:
+            self.usage()
+            sys.exit(0)
 
         self.search = args.search
         self.index_dir = args.index_dir[0]

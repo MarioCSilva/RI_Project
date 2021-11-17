@@ -22,9 +22,6 @@ class Tokenizer:
         self.init_porter_filter()
         self.init_stop_words_filter(stopwords_file=stopwords_file)
 
-        # regex normalizer
-        self.rgx = re.compile("(\w[\w']*\w|\w)")
-
 
     def init_min_len_filter(self, length):
         if self.min_length_filter:
@@ -49,9 +46,10 @@ class Tokenizer:
     def tokenize(self, input_string) -> list():
         final_tokens = defaultdict(list)
 
-        # removes alone digits
-        input_string = re.sub("[0-9]+[^0-9a-z'_-]+"," ", input_string.lower())
-        tokens = re.findall(self.rgx, input_string)
+        tokens = input_string.split()
+        
+        tokens = [re.sub("[^0-9a-z]+"," ", token.lower()).split() for token in tokens]
+        tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
 
         for index, token in enumerate(tokens):
             if (not self.min_length_filter or len(token) >= self.min_length) \

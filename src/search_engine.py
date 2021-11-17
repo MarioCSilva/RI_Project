@@ -47,6 +47,8 @@ class Search_Engine:
 		while True:
 			print(len(self.indexer))
 			query = input("Search for anything (q to quit): ")
-			
 			if query == "q":
 				sys.exit()
+			res = self.indexer[query]
+			print(f"Number of Occurrences of {query}: {res[0]}")
+			
