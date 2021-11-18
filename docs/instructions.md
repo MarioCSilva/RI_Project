@@ -16,7 +16,7 @@ python3 main.py
 ```
     -i <Directory name for indexation:str>
     -f <File Name for data set:str>
-    -m <Minimum Length Filter>
+    -mi <Minimum Length Filter>
     -l <Length for Minimum Length Filter:int>
     -p <Porter Stemmer Filter>
     -stopwords <Stop Words Filter>
