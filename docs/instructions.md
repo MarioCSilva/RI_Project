@@ -7,7 +7,7 @@ Inside the RI_Project diretory:
 pip3 install -r requirements.txt
 ```
 
-- To run the project go to the `src` dir and simply execute:
+- To run the project go to the `src` dir and simply execute (the default value of the file may be different so please consider indicating that parameter):
 ```bash
 python3 main.py
 ```
@@ -18,10 +18,10 @@ python3 main.py
     -f <File Name for data set:str>
     -mi <Minimum Length Filter>
     -l <Length for Minimum Length Filter:int>
-    -p <Porter Stemmer Filter>
+    -por <Porter Stemmer Filter>
     -stopwords <Stop Words Filter>
     -stopwords_file <Stop Words File>
     -mp <Map Reduce>
     -search <Search Engine>
-    -positions <Store term's positions in postings>
+    -pos <Store term's positions in postings>
 ```
