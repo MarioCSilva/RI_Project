@@ -65,7 +65,7 @@ This task is computed simultaneously by 4 processes that are launched with this 
 ( term, { doc_id_1: [2,3,4], doc_id_2: [6,4] }, 5)
 ```
 
-- Overhead - there is only benefit of using map reducing when the cost of transferring information from processes is much smaller to the processing that is executed in the functions of mapping and reducing. It also should be used in different machines and not in a single computer to take the most benefit out of it. In out case, the overhead of creating processes and data transferring between processes could be too big for the operations that are executed. However we will analyze the results on the Statistics part.
+- Overhead - there is only benefit of using map reducing when the cost of transferring information from processes is much smaller to the processing that is executed in the functions of mapping and reducing. It also should be used in different machines and not in a single computer to take the most benefit out of it. In our case, the overhead of creating processes and data transferring between processes could be too big for the operations that are executed. However we will analyze the results on the Statistics part.
 
 
 ## Class Search Engine:
