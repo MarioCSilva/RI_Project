@@ -33,12 +33,11 @@ class Indexer:
 		self.block_id = 0
 
 		self.INDEX_DIR = f"../{index_dir}"
-		self.DATASET_DIR = "../dataset/"
 		self.POSTINGS_DIR = f"{self.INDEX_DIR}/posting_blocks/"
 		self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
 		self.INDEXER_DIR = f"{self.INDEX_DIR}/indexer_dict/"
 
-		self.file_name = f"{self.DATASET_DIR}{file_name}"
+		self.file_name = file_name
 
 		dir_list = [self.INDEX_DIR, self.POSTINGS_DIR,\
 			self.PARTITION_DIR, self.INDEXER_DIR]

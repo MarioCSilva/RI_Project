@@ -17,7 +17,7 @@ python3 main.py
 - Additional arguments:
 ```
     -i <Directory name for indexation:str>
-    -f <File Name for data set:str>
+    -f <File Name (Path) for data set:str>
     -mi <Minimum Length Filter>
     -l <Length for Minimum Length Filter:int>
     -por <Porter Stemmer Filter>
