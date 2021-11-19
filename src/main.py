@@ -19,7 +19,7 @@ class Main:
     def usage(self):
         print("Usage: python3 main.py\
             \n\t-i <Directory name for indexation:str>\
-            \n\t-f <File Name for data set:str>\
+            \n\t-f <File Name (Path) for data set:str>\
             \n\t-m <Minimum Length Filter>\
             \n\t-l <Length for Minimum Length Filter:int>\
             \n\t-porter <Porter Stemmer Filter>\
