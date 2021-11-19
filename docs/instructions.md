@@ -7,6 +7,8 @@ Inside the RI_Project diretory:
 pip3 install -r requirements.txt
 ```
 
+- Add to a diretory called `dataset` the files that contain the documents to be indexed.
+
 - To run the project go to the `src` dir and simply execute (the default value of the file may be different so please consider indicating that parameter):
 ```bash
 python3 main.py

@@ -16,12 +16,15 @@ class Tokenizer:
         self.porter_filter = porter_filter
         self.min_length_filter = min_length_filter
         self.stop_words_filter = stop_words_filter
+        # Longest word in the English language featuring alternating consonants and vowels
+        # and longest word word in Shakespeare's works has size 27
+        self.max_length = 27
         
         # initialize Stop Words and Porter Filter if needed
         self.init_min_len_filter(length=min_length)
         self.init_porter_filter()
         self.init_stop_words_filter(stopwords_file=stopwords_file)
-
+    
 
     def init_min_len_filter(self, length):
         if self.min_length_filter:
@@ -52,7 +55,9 @@ class Tokenizer:
         tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
 
         for index, token in enumerate(tokens):
-            if (not self.min_length_filter or len(token) >= self.min_length) \
+            token_size = len(token)
+            if (not self.min_length_filter or token_size >= self.min_length) \
+                and token_size <= self.max_length \
                 and (not self.stop_words_filter or token not in self.stop_words):
                     if self.porter_filter:
                         final_tokens[self.ps.stem(token)].append(index)

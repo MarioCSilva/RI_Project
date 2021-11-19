@@ -30,12 +30,14 @@ class Search_Engine:
 
 	""" Load indexer data structure into memory """
 	def load_indexer(self):
-		indexer_dir = os.listdir(self.INDEXER_DIR)
-		if len(indexer_dir) < 0:
-			return
-
-		indexer_file = gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz", 'rt')
-
+		try:
+			indexer_dir = os.listdir(self.INDEXER_DIR)
+			if len(indexer_dir) < 0:
+				return
+			indexer_file = gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz", 'rt')
+		except FileNotFoundError as e:
+			logging.error("Could not Find Indexer on disk. Please Run the Indexer first.")
+			sys.exit(0)
 		for line in indexer_file:
 			indexer_line = line[:-1].split('  ')
 			term = indexer_line[0]

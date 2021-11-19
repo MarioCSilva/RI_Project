@@ -20,7 +20,7 @@ This class has the main goal to index all terms found on each dataset, and write
 
 - Store indexer data structure in a file:
 
-    This structure is a dictionary with the terms as key, and as value, the document frequency, as well as the line the term is on the partition file.
+    This structure is a dictionary with the terms as key, and as value, the document frequency, as well as the line the term is written on the partition file.
 
 
 ## Class Tokenizer:
@@ -28,9 +28,10 @@ This class has the main goal to index all terms found on each dataset, and write
 This class will process the documents and return all terms found and the positions of these.
 
 - Allows the user of three type of filters, which can be used simultaneously. Those filters are the minimum length filter, the Stop Words Filter and Snowball Stemmer Filter. The minimum length filter allows only the processing of terms with the minimum length wished. The Stop Words filter has the goal of ignoring certain words, the Stop Words, such as articles, prepositions, pronouns or conjunctions. Finally, the Snowball Stemmer Filter is available to do the stemming of the terms, in other words, reduces words by removing its prefixes and suffixes.
-
         
 - The tokenization function makes the all terms lower cased, then, it replaces any terms that contain only digits, and also unwanted symbols.
+
+- Removes words bigger than 27 characters, because the longest word in the English language featuring alternating consonants and vowels and longest word word in Shakespeare's works has 27 characters.
 
 ## Class Map Reducer:
 
