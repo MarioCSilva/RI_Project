@@ -56,7 +56,7 @@ class Main:
         self.index_dir = args.index_dir[0]
         filename = args.filename[0]
         if self.index_dir == "":
-            self.index_dir = filename.split('.')[0]
+            self.index_dir = filename.split('/')[-1].split('.')[0]
         min_len = args.length[0] if args.min_length and args.length else None
 
         return self.index_dir, filename, args.min_length, min_len, args.porter,\

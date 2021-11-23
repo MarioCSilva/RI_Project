@@ -7,10 +7,12 @@ import time
 
 
 class Search_Engine:
-	def __init__(self, indexer_dir):
+	def __init__(self, index_dir):
 		start_search_time = time.time()
 
-		self.INDEXER_DIR = f"../{indexer_dir}/indexer_dict/"
+		self.INDEX_DIR = f"../{index_dir}"
+		self.INDEXER_DIR = f"{self.INDEX_DIR}/indexer_dict/"
+		self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
 
 		self.indexer = defaultdict(lambda: [0, 0])
 
@@ -45,12 +47,25 @@ class Search_Engine:
 				indexer_line[1], indexer_line[2]
 
 
+	def get_partition_file(self, term):
+		for file in os.listdir(self.PARTITION_DIR):
+			first_term, last_term = file.split('.')[0].split(' ')
+			if term >= first_term and term <= last_term:
+				logging.info(f"Postings of the term {term} is indexed the partition file {file}")
+				return file
+
+
+	def handle_query(self, query):
+		self.get_partition_file(query)
+		res = self.indexer[query]
+		print(f"Number of Occurrences of {query}: {res[0]}")
+
+
 	def search_text(self):
 		while True:
-			print(len(self.indexer))
 			query = input("Search for anything (q to quit): ")
+
 			if query == "q":
 				sys.exit()
-			res = self.indexer[query]
-			print(f"Number of Occurrences of {query}: {res[0]}")
-			
+
+			self.handle_query(query)
