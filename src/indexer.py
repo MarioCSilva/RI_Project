@@ -19,7 +19,7 @@ class Indexer:
 		# data structures
 		self.indexer = defaultdict(lambda: [0, 0])
 
-		self.postings = defaultdict(lambda: defaultdict(lambda: (0, [])))
+		self.postings = defaultdict(lambda: defaultdict(lambda: [0, []]))
 
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
@@ -170,6 +170,7 @@ class Indexer:
 
 	def index_tokens(self, document_id, tokens):
 		doc_sum_term_weights = 0
+		
 		for token, positions in tokens.items():
 			self.indexer[token][0] += 1
 			if self.store_positions:
@@ -179,11 +180,12 @@ class Indexer:
 			doc_sum_term_weights += weight**2
 			self.num_stored_items += 1
 
-		cos_norm = 1 / sqrt(doc_sum_term_weights)
+		if doc_sum_term_weights:
+			cos_norm = 1 / sqrt(doc_sum_term_weights)
 
-		for token, _ in tokens.items():
-			for doc in self.postings[token]:
-				self.postings[token][doc][0] *= cos_norm
+			for token, _ in tokens.items():
+				for doc in self.postings[token]:
+					self.postings[token][doc][0] *= cos_norm
 
 
 	def sort_terms(self, postings_lst):
