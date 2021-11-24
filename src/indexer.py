@@ -190,8 +190,8 @@ class Indexer:
 		with gzip.open(output_file,'wt') as f:
 			line = 0
 			for term, postings in sorted_terms:
-				line += 1
 				self.indexer[term][1] = line
+				line += 1
 				f.write(f"{term}  {postings}\n")
 
 
@@ -236,8 +236,11 @@ class Indexer:
 				merge_postings = OrderedDict()
 			self.num_stored_items += 1
 
-			merge_postings[term] = f"{merge_postings.get(term, '')} {postings}"
-
+			if term in merge_postings:
+				merge_postings[term] = f"{merge_postings[term]} {postings}"
+			else:
+				merge_postings[term] = postings
+	
 			# store last term
 			last_term = term
 

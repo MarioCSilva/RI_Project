@@ -4,6 +4,8 @@ import gzip
 import sys
 import logging
 import time
+from tokenizer import Tokenizer
+from functools import lru_cache
 
 
 class Search_Engine:
@@ -38,27 +40,62 @@ class Search_Engine:
 				return
 			indexer_file = gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz", 'rt')
 		except FileNotFoundError as e:
-			logging.error("Could not Find Indexer on disk. Please Run the Indexer first.")
+			logging.error("Could not find indexer on disk. Please run the indexer first.")
 			sys.exit(0)
+
 		for line in indexer_file:
 			indexer_line = line[:-1].split('  ')
 			term = indexer_line[0]
 			self.indexer[term][0], self.indexer[term][1] = \
-				indexer_line[1], indexer_line[2]
+				int(indexer_line[1]), int(indexer_line[2])
 
 
 	def get_partition_file(self, term):
 		for file in os.listdir(self.PARTITION_DIR):
 			first_term, last_term = file.split('.')[0].split(' ')
 			if term >= first_term and term <= last_term:
-				logging.info(f"Postings of the term {term} is indexed the partition file {file}")
-				return file
+				return f"{self.PARTITION_DIR}{file}"
+
+
+	def read_file_line(self, file, line):
+		for i, x in enumerate(file):
+			if i == line:
+				return x[:-1]
+
+
+	@lru_cache(maxsize=32)
+	def search_term(self, term):
+		num_occ, partition_line = self.indexer[term]
+		postings = []
+		if num_occ:
+			partition_file = self.get_partition_file(term)
+			logging.info(f"Postings of '{term}' are indexed in the partition file '{partition_file}'")
+
+			try:
+				partition_file = gzip.open(partition_file, 'rt')
+			except FileNotFoundError as e:
+				logging.error("Could not find partition on disk.")
+				return 0, 0
+
+			# TODO:
+			# probably it isn't necessary to store terms in the partition file
+			# since we know the line that points to the exact postings list
+			postings_str = self.read_file_line(partition_file, partition_line).split('  ')[1].split(' ')
+			for doc in postings_str:
+				postings.append(doc)
+
+			partition_file.close()
+		return num_occ, postings
 
 
 	def handle_query(self, query):
-		self.get_partition_file(query)
-		res = self.indexer[query]
-		print(f"Number of Occurrences of {query}: {res[0]}")
+		for term in Tokenizer.simple_tokenize(query):
+			num_occ, postings = self.search_term(term)
+			if not num_occ:
+				print(f"Term '{term}' not indexed.")
+				continue
+			print(f"Number of Occurrences of '{term}': {num_occ}")
+			print(f"Posting List of '{term}': {postings}")
 
 
 	def search_text(self):

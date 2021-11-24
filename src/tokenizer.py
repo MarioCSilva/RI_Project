@@ -46,6 +46,16 @@ class Tokenizer:
                     self.stop_words |= set(line.split(","))
 
 
+    @staticmethod
+    def simple_tokenize(input_string):
+        tokens = input_string.split()
+        
+        tokens = [re.sub("[^0-9a-z]+"," ", token.lower()).split() for token in tokens]
+        tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
+
+        return tokens
+
+
     def tokenize(self, input_string) -> list():
         final_tokens = defaultdict(list)
 
