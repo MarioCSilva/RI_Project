@@ -51,18 +51,18 @@ class Search_Engine:
 
 		for line in config_file:
 			config = line[:-1].split('  ')
-			if config == "store_positions":
+			#config = line[:-1].split(':')
+			if config[0] == "store_positions":
 				self.store_positions = True
-			elif config == "min_length_filter":
+			elif config[0] == "min_length_filter":
 				tokenizer.min_length_filter = True
-				tokenizer.min_length = config[1]
-				tokenizer.init_min_len_filter()
-			elif config == "porter_filter":
+				tokenizer.init_min_len_filter(int(config[1]))
+			elif config[0] == "porter_filter":
 				tokenizer.porter_filter = True
 				tokenizer.init_porter_filter()
-			elif config == "stop_words_filter":
+			elif config[0] == "stop_words_filter":
 				tokenizer.stop_words_filter = True
-			elif config == "stop_words_file":
+			elif config[0] == "stop_words_file":
 				stop_words_file = config[1]
 				tokenizer.init_stop_words_filter(stop_words_file)
 
@@ -81,7 +81,7 @@ class Search_Engine:
 			sys.exit(0)
 
 		for line in indexer_file:
-			indexer_line = line[:-1].split('  ')
+			indexer_line = line[:-1].split(';')
 			term = indexer_line[0]
 			self.indexer[term][0], self.indexer[term][1] = \
 				int(indexer_line[1]), int(indexer_line[2])
@@ -104,6 +104,8 @@ class Search_Engine:
 	def search_term(self, term):
 		num_occ, partition_line = self.indexer[term]
 		postings = []
+		idf = 0
+
 		if num_occ:
 			partition_file = self.get_partition_file(term)
 			logging.info(f"Postings of '{term}' are indexed in the partition file '{partition_file}'")
@@ -114,20 +116,25 @@ class Search_Engine:
 				logging.error("Could not find partition on disk.")
 				return 0, 0
 
-			postings_str = self.read_file_line(partition_file, partition_line).split(';')
+			term_idf_postings = self.read_file_line(partition_file, partition_line).split(';')
+
+			idf, postings_str = term_idf_postings[0], term_idf_postings[1:]
+
 			for doc in postings_str:
 				postings.append(doc)
 
 			partition_file.close()
-		return num_occ, postings
+
+		return num_occ, idf, postings
 
 
 	def handle_query(self, query):
-		for term in self.tokenizer.tokenize(query):
-			num_occ, postings = self.search_term(term)
+		for term in self.tokenizer.tokenize(query).keys():
+			num_occ, idf, postings = self.search_term(term)
 			if not num_occ:
 				print(f"Term '{term}' not indexed.")
 				continue
+			print(f"IDF of '{term}': {idf}")
 			print(f"Number of Occurrences of '{term}': {num_occ}")
 			print(f"Posting List of '{term}': {postings}")
 

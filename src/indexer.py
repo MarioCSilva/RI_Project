@@ -184,8 +184,7 @@ class Indexer:
 			cos_norm = 1 / sqrt(doc_sum_term_weights)
 
 			for token, _ in tokens.items():
-				for doc in self.postings[token]:
-					self.postings[token][doc][0] *= cos_norm
+				self.postings[token][document_id][0] *= cos_norm
 
 
 	def sort_terms(self, postings_lst):
@@ -197,13 +196,13 @@ class Indexer:
 			if map_red_index:
 				for term, postings, num_occ in sorted_terms:
 					self.indexer[term][0] += num_occ
-					f.write(f"{term};{';'.join([f'{doc}:{data[0]}' for doc, data in postings.items()])}\n")
+					f.write(f"{term}  {';'.join([f'{doc}:{data[0]}' for doc, data in postings.items()])}\n")
 			else:
 				for term, postings in sorted_terms:
 					if self.store_positions:
-						f.write(f"{term};{';'.join([f'{doc}:{data[0]}:{data[1]}' for doc, data in postings.items()])}\n")
+						f.write(f"{term}  {';'.join([f'{doc}:{data[0]}:{data[1]}' for doc, data in postings.items()])}\n")
 					else:
-						f.write(f"{term};{';'.join([f'{doc}:{data[0]}' for doc, data in postings.items()])}\n")
+						f.write(f"{term}  {';'.join([f'{doc}:{data[0]}' for doc, data in postings.items()])}\n")
 
 
 	def write_partition_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz', map_red_index=False):
@@ -225,7 +224,7 @@ class Indexer:
 			sorted_terms = self.sort_terms(processed_documents)
 		else:
 			sorted_terms = self.sort_terms(self.postings.items())
-			self.postings = defaultdict(lambda: defaultdict(list))
+			self.postings = defaultdict(lambda: defaultdict(lambda: [0, []]))
 		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file, map_red_index=map_red_index)
 
 		self.num_stored_items = 0
@@ -245,9 +244,9 @@ class Indexer:
 		while len(block_files) > 0:
 			# get smaller element in alphabet
 			min_ind = block_postings.index(min(block_postings))
-			line_posting = block_postings[min_ind].split(';')
+			line_posting = block_postings[min_ind].split('  ')
 
-			term, postings = line_posting[0], line_posting[1:]
+			term, postings = line_posting[0], line_posting[1]
 
 			# write partition of postings to disk when
 			# finds a new term and passed the limit
@@ -258,7 +257,7 @@ class Indexer:
 			self.num_stored_items += 1
 
 			if term in merge_postings:
-				merge_postings[term] = f"{merge_postings[term]};{postings}"
+				merge_postings[term] += f";{postings}"
 			else:
 				merge_postings[term] = postings
 	
@@ -303,13 +302,13 @@ class Indexer:
 	def store_indexer(self):
 		with gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz",'wt') as f:
 			for term, freq_pos in self.indexer.items():
-				f.write(f"{term}  {str(freq_pos[0])}  {str(freq_pos[1])}\n")
+				f.write(f"{term};{str(freq_pos[0])};{str(freq_pos[1])}\n")
 
 
 	def store_config(self):
 		with gzip.open(f"{self.CONFIG_DIR}config.txt.gz",'wt') as f:
-			if self.store_positions: f.write(f"store_positions  {self.store_positions}\n")
-			if self.tokenizer.min_length_filter: f.write(f"min_length_filter  {self.tokenizer.min_length}\n")
-			if self.tokenizer.porter_filter: f.write(f"porter_filter  {self.tokenizer.porter_filter}\n")
+			if self.store_positions: f.write(f"store_positions\n")
+			if self.tokenizer.min_length_filter: f.write(f"min_length_filter:{self.tokenizer.min_length}\n")
+			if self.tokenizer.porter_filter: f.write(f"porter_filter\n")
 			if self.tokenizer.stop_words_filter: f.write(f"stop_words_filter\n")
-			if self.tokenizer.stop_words_file: f.write(f"stop_words_file  {self.tokenizer.stop_words_file}\n")
+			if self.tokenizer.stop_words_file: f.write(f"stop_words_file:{self.tokenizer.stop_words_file}\n")
