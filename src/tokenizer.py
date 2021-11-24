@@ -1,7 +1,8 @@
 from collections import defaultdict
 import re
 from nltk.stem.snowball import SnowballStemmer
-
+import logging
+import sys
 '''
 i.A minimum length filterthat removes tokens with less than a defaultnumber of characters.
 Allow the user to disable the filter or set another value;
@@ -19,6 +20,8 @@ class Tokenizer:
         # Longest word in the English language featuring alternating consonants and vowels
         # and longest word word in Shakespeare's works has size 27
         self.max_length = 27
+
+        self.stop_words_file = None
         
         # initialize Stop Words and Porter Filter if needed
         self.init_min_len_filter(length=min_length)
@@ -41,19 +44,14 @@ class Tokenizer:
     def init_stop_words_filter(self, stopwords_file):
         if self.stop_words_filter:
             self.stop_words = set()
-            with open(stopwords_file, 'r') as stop_words_file:
-                for line in stop_words_file:
-                    self.stop_words |= set(line.split(","))
-
-
-    @staticmethod
-    def simple_tokenize(input_string):
-        tokens = input_string.split()
-        
-        tokens = [re.sub("[^0-9a-z]+"," ", token.lower()).split() for token in tokens]
-        tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
-
-        return tokens
+            try:
+                with open(stopwords_file, 'r') as stop_words_file:
+                    self.stop_words_file = stop_words_file
+                    for line in stop_words_file:
+                        self.stop_words |= set(line.split(","))
+            except FileNotFoundError:
+                logging.info("Stop words file not found.")
+                sys.exit()            
 
 
     def tokenize(self, input_string) -> list():

@@ -15,7 +15,7 @@ class Search_Engine:
 		self.INDEX_DIR = f"../{index_dir}"
 		self.INDEXER_DIR = f"{self.INDEX_DIR}/indexer_dict/"
 		self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
-		self.CONFIG_DIR = f"{self.INDEX_DIR}/indexer_dict/"
+		self.CONFIG_DIR = f"{self.INDEX_DIR}/config/"
 
 		self.indexer = defaultdict(lambda: [0, 0])
 
@@ -62,9 +62,9 @@ class Search_Engine:
 				tokenizer.init_porter_filter()
 			elif config == "stop_words_filter":
 				tokenizer.stop_words_filter = True
-			elif config == "stopwords_file":
-				stopwords_file = config[1]
-				tokenizer.init_stop_words_filter(stopwords_file)
+			elif config == "stop_words_file":
+				stop_words_file = config[1]
+				tokenizer.init_stop_words_filter(stop_words_file)
 
 		return tokenizer
 
@@ -100,7 +100,7 @@ class Search_Engine:
 				return x[:-1]
 
 
-	@lru_cache(maxsize=32)
+	@lru_cache(maxsize=50)
 	def search_term(self, term):
 		num_occ, partition_line = self.indexer[term]
 		postings = []
@@ -126,7 +126,7 @@ class Search_Engine:
 
 
 	def handle_query(self, query):
-		for term in Tokenizer.simple_tokenize(query):
+		for term in self.tokenizer.tokenize(query):
 			num_occ, postings = self.search_term(term)
 			if not num_occ:
 				print(f"Term '{term}' not indexed.")

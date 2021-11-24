@@ -292,7 +292,7 @@ class Indexer:
 	def store_config(self):
 		with gzip.open(f"{self.CONFIG_DIR}config.txt.gz",'wt') as f:
 			if self.store_positions: f.write(f"store_positions  {self.store_positions}\n")
-			if self.tokenizer.min_length_filter: f.write(f"min_length_filter  {self.tokenizer.min_len}\n")
+			if self.tokenizer.min_length_filter: f.write(f"min_length_filter  {self.tokenizer.min_length}\n")
 			if self.tokenizer.porter_filter: f.write(f"porter_filter  {self.tokenizer.porter_filter}\n")
 			if self.tokenizer.stop_words_filter: f.write(f"stop_words_filter\n")
-			if self.tokenizer.stopwords_file: f.write(f"stopwords_file  {self.tokenizer.stopwords_file}\n")
+			if self.tokenizer.stop_words_file: f.write(f"stop_words_file  {self.tokenizer.stop_words_file}\n")
