@@ -36,11 +36,12 @@ class Indexer:
 		self.POSTINGS_DIR = f"{self.INDEX_DIR}/posting_blocks/"
 		self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
 		self.INDEXER_DIR = f"{self.INDEX_DIR}/indexer_dict/"
+		self.CONFIG_DIR = f"{self.INDEX_DIR}/config/"
 
 		self.file_name = file_name
 
 		dir_list = [self.INDEX_DIR, self.POSTINGS_DIR,\
-			self.PARTITION_DIR, self.INDEXER_DIR]
+			self.PARTITION_DIR, self.INDEXER_DIR, self.CONFIG_DIR]
 		self.check_dir_exist(dir_list)
 
 		# current number of stored_chunks
@@ -67,6 +68,9 @@ class Indexer:
 
 		# store indexer data structure in a file
 		self.store_indexer()
+
+		# store important flags/configurations to be used in the search engine
+		self.store_config()
 
 		end_index_time = time.time()
 		total_index_time = end_index_time -start_index_time
@@ -284,3 +288,11 @@ class Indexer:
 			for term, freq_pos in self.indexer.items():
 				f.write(f"{term}  {str(freq_pos[0])}  {str(freq_pos[1])}\n")
 
+
+	def store_config(self):
+		with gzip.open(f"{self.CONFIG_DIR}config.txt.gz",'wt') as f:
+			if self.store_positions: f.write(f"store_positions  {self.store_positions}\n")
+			if self.tokenizer.min_length_filter: f.write(f"min_length_filter  {self.tokenizer.min_len}\n")
+			if self.tokenizer.porter_filter: f.write(f"porter_filter  {self.tokenizer.porter_filter}\n")
+			if self.tokenizer.stop_words_filter: f.write(f"stop_words_filter\n")
+			if self.tokenizer.stopwords_file: f.write(f"stopwords_file  {self.tokenizer.stopwords_file}\n")

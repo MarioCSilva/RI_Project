@@ -15,8 +15,13 @@ class Search_Engine:
 		self.INDEX_DIR = f"../{index_dir}"
 		self.INDEXER_DIR = f"{self.INDEX_DIR}/indexer_dict/"
 		self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
+		self.CONFIG_DIR = f"{self.INDEX_DIR}/indexer_dict/"
 
 		self.indexer = defaultdict(lambda: [0, 0])
+
+		self.store_positions = False
+
+		self.tokenizer = self.read_config()
 
 		self.load_indexer()
 		
@@ -30,6 +35,38 @@ class Search_Engine:
 
 	def get_statistics(self, total_search_time):
 		logging.info(f"e) Amount of time taken to start up an index searcher, after the final index is written to disk: {total_search_time} seconds")
+
+
+	""" Load configurations used during indexation """
+	def read_config(self):
+		tokenizer = Tokenizer()
+		try:
+			config_dir = os.listdir(self.CONFIG_DIR)
+			if len(config_dir) < 0:
+				return
+			config_file = gzip.open(f"{self.CONFIG_DIR}config.txt.gz",'rt')
+		except FileNotFoundError as e:
+			logging.error("Could not find configurations file on disk. Please run the indexer first.")
+			sys.exit(0)
+
+		for line in config_file:
+			config = line[:-1].split('  ')
+			if config == "store_positions":
+				self.store_positions = True
+			elif config == "min_length_filter":
+				tokenizer.min_length_filter = True
+				tokenizer.min_length = config[1]
+				tokenizer.init_min_len_filter()
+			elif config == "porter_filter":
+				tokenizer.porter_filter = True
+				tokenizer.init_porter_filter()
+			elif config == "stop_words_filter":
+				tokenizer.stop_words_filter = True
+			elif config == "stopwords_file":
+				stopwords_file = config[1]
+				tokenizer.init_stop_words_filter(stopwords_file)
+
+		return tokenizer
 
 
 	""" Load indexer data structure into memory """
