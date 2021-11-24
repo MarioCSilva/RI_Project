@@ -5,6 +5,7 @@ import psutil
 import logging
 import gzip
 import time
+from math import log10, sqrt
 from map_reducer import MapReducer
 import sys
 
@@ -18,7 +19,7 @@ class Indexer:
 		# data structures
 		self.indexer = defaultdict(lambda: [0, 0])
 
-		self.postings = defaultdict(lambda: defaultdict(list))
+		self.postings = defaultdict(lambda: defaultdict(lambda: (0, [])))
 
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
@@ -47,6 +48,9 @@ class Indexer:
 		# current number of stored_chunks
 		self.num_stored_items = 0
 
+		# number of documents
+		self.n_docs = 0
+		
 		# maximum number of tokens's postings stored in memory
 		self.MAX_CHUNK_LIMIT = 1000000
 		# maximum number of documents for map reduce to handle
@@ -115,6 +119,8 @@ class Indexer:
 			review_id, input_string = paragraph[2],\
 				f"{paragraph[-3]} {paragraph[-2]}"
 
+			self.n_docs+=1
+
 			if self.map_reducer:
 				self.num_stored_items += 1
 				input_documents.append( (review_id, input_string) )
@@ -163,13 +169,21 @@ class Indexer:
 
 
 	def index_tokens(self, document_id, tokens):
+		doc_sum_term_weights = 0
 		for token, positions in tokens.items():
 			self.indexer[token][0] += 1
 			if self.store_positions:
-				self.postings[token][document_id] = positions
-			else:
-				self.postings[token][document_id]
+				self.postings[token][document_id][1] = positions
+			weight = 1 + log10(len(positions))
+			self.postings[token][document_id][0] = weight
+			doc_sum_term_weights += weight**2
 			self.num_stored_items += 1
+
+		cos_norm = 1 / sqrt(doc_sum_term_weights)
+
+		for token, _ in tokens.items():
+			for doc in self.postings[token]:
+				self.postings[token][doc][0] *= cos_norm
 
 
 	def sort_terms(self, postings_lst):
@@ -181,13 +195,13 @@ class Indexer:
 			if map_red_index:
 				for term, postings, num_occ in sorted_terms:
 					self.indexer[term][0] += num_occ
-					f.write(f"{term}  {' '.join(postings)}\n")
+					f.write(f"{term};{';'.join([f'{doc}:{data[0]}' for doc, data in postings.items()])}\n")
 			else:
 				for term, postings in sorted_terms:
 					if self.store_positions:
-						f.write(f"{term}  {' '.join([f'{doc}:{pos}' for doc, pos in postings.items()])}\n")
+						f.write(f"{term};{';'.join([f'{doc}:{data[0]}:{data[1]}' for doc, data in postings.items()])}\n")
 					else:
-						f.write(f"{term}  {' '.join(postings)}\n")
+						f.write(f"{term};{';'.join([f'{doc}:{data[0]}' for doc, data in postings.items()])}\n")
 
 
 	def write_partition_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz', map_red_index=False):
@@ -196,7 +210,8 @@ class Indexer:
 			for term, postings in sorted_terms:
 				self.indexer[term][1] = line
 				line += 1
-				f.write(f"{term}  {postings}\n")
+				idf = log10(self.n_docs / self.indexer[term][0])
+				f.write(f"{idf};{postings}\n")
 
 
 	def block_write_setup(self, processed_documents=None, map_red_index=False):
@@ -228,9 +243,9 @@ class Indexer:
 		while len(block_files) > 0:
 			# get smaller element in alphabet
 			min_ind = block_postings.index(min(block_postings))
-			line_posting = block_postings[min_ind].split('  ')
+			line_posting = block_postings[min_ind].split(';')
 
-			term, postings = line_posting[0], line_posting[1]
+			term, postings = line_posting[0], line_posting[1:]
 
 			# write partition of postings to disk when
 			# finds a new term and passed the limit
@@ -241,7 +256,7 @@ class Indexer:
 			self.num_stored_items += 1
 
 			if term in merge_postings:
-				merge_postings[term] = f"{merge_postings[term]} {postings}"
+				merge_postings[term] = f"{merge_postings[term]};{postings}"
 			else:
 				merge_postings[term] = postings
 	

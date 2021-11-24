@@ -114,10 +114,7 @@ class Search_Engine:
 				logging.error("Could not find partition on disk.")
 				return 0, 0
 
-			# TODO:
-			# probably it isn't necessary to store terms in the partition file
-			# since we know the line that points to the exact postings list
-			postings_str = self.read_file_line(partition_file, partition_line).split('  ')[1].split(' ')
+			postings_str = self.read_file_line(partition_file, partition_line).split(';')
 			for doc in postings_str:
 				postings.append(doc)
 
