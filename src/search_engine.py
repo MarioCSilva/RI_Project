@@ -3,13 +3,14 @@ import os
 import gzip
 import sys
 import logging
-import time
 from tokenizer import Tokenizer
 from functools import lru_cache
+from math import log10, sqrt
+import time
 
 
 class Search_Engine:
-	def __init__(self, index_dir):
+	def __init__(self, index_dir, queries_file):
 		start_search_time = time.time()
 
 		self.INDEX_DIR = f"../{index_dir}"
@@ -17,20 +18,30 @@ class Search_Engine:
 		self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
 		self.CONFIG_DIR = f"{self.INDEX_DIR}/config/"
 
+		self.QUERY_DIR = f"{self.INDEX_DIR}/queries_results/"
+
+		self.check_dir_exist(self.QUERY_DIR)
+
 		self.indexer = defaultdict(lambda: [0, 0])
 
 		self.store_positions = False
 
 		self.tokenizer = self.read_config()
 
+		self.queries_file = queries_file
+
 		self.load_indexer()
 		
-		end_search_time = time.time()
-		total_search_time = end_search_time -start_search_time
+		total_search_time = time.time() -start_search_time
 
 		self.get_statistics(total_search_time)
 
-		self.search_text()
+		self.search_queries()
+
+
+	def check_dir_exist(self, directory):
+		if not os.path.exists(directory):
+			os.mkdir(directory)
 
 
 	def get_statistics(self, total_search_time):
@@ -102,11 +113,11 @@ class Search_Engine:
 
 	@lru_cache(maxsize=50)
 	def search_term(self, term):
-		num_occ, partition_line = self.indexer[term]
-		postings = []
-		idf = 0
+		doc_freq, partition_line = self.indexer[term]
+		idf = 0.0
+		doc_weights = {}
 
-		if num_occ:
+		if doc_freq:
 			partition_file = self.get_partition_file(term)
 			logging.info(f"Postings of '{term}' are indexed in the partition file '{partition_file}'")
 
@@ -118,32 +129,72 @@ class Search_Engine:
 
 			term_idf_postings = self.read_file_line(partition_file, partition_line).split(';')
 
-			idf, postings_str = term_idf_postings[0], term_idf_postings[1:]
+			idf, postings_str = float(term_idf_postings[0]), term_idf_postings[1:]
 
-			for doc in postings_str:
-				postings.append(doc)
+			for doc_weight_str in postings_str:
+				doc_weight_lst = doc_weight_str.split(':')
+				doc, weight = doc_weight_lst[0], float(doc_weight_lst[1])
+				doc_weights[doc] = weight
 
 			partition_file.close()
 
-		return num_occ, idf, postings
+		return doc_freq, idf, doc_weights
 
 
 	def handle_query(self, query):
-		for term in self.tokenizer.tokenize(query).keys():
-			num_occ, idf, postings = self.search_term(term)
-			if not num_occ:
+		use_idf = True
+
+		scores = defaultdict(lambda: 0)
+
+		tokenized_query = self.tokenizer.tokenize(query)
+
+		if len(tokenized_query) == 1:
+			use_idf = False
+
+		cos_norm_value = 0
+		for term, positions in tokenized_query.items():
+			doc_freq, idf, doc_weights = self.search_term(term)
+			
+			if not doc_freq:
 				print(f"Term '{term}' not indexed.")
 				continue
+			
+			l = 1 + log10(len(positions))
+			weight = l
+			if not use_idf:
+				weight *= idf
+
+			cos_norm_value += weight ** 2
+
+			for doc, doc_weight in doc_weights.items():
+				scores[doc] += doc_weight * weight
+
 			print(f"IDF of '{term}': {idf}")
-			print(f"Number of Occurrences of '{term}': {num_occ}")
-			print(f"Posting List of '{term}': {postings}")
+			print(f"Document Frequency of '{term}': {doc_freq}")
+
+		if cos_norm_value:
+			cos_norm_value = 1 / sqrt(cos_norm_value)
+
+			for doc in scores.keys():
+				scores[doc] *= cos_norm_value
+		
+		return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
 
 
-	def search_text(self):
-		while True:
-			query = input("Search for anything (q to quit): ")
+	def write_results_to_file(self, query_index, results_query):
+		with open(f"{self.QUERY_DIR}query_{query_index}", 'w+') as f:
+			output = '\n'.join(results_query)
+			f.write(f"{output}")
 
-			if query == "q":
-				sys.exit()
 
-			self.handle_query(query)
+	def search_queries(self):
+		try:
+			queries_file = open(self.queries_file, "r")
+		except FileNotFoundError:
+			logging.info("File for queries not found.")
+			sys.exit()
+
+		for index, query in enumerate(queries_file):
+			results_query = self.handle_query(query)
+			
+			self.write_results_to_file(index, results_query)

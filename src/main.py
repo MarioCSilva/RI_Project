@@ -12,8 +12,7 @@ class Main:
         if not self.search:
             self.indexer = Indexer(*indexer_args)
         else:
-            self.search_engine = Search_Engine(self.index_dir)
-            self.search_engine.search()
+            self.search_engine = Search_Engine(self.index_dir, self.queries_file)
 
 
     def usage(self):
@@ -41,10 +40,11 @@ class Main:
         arg_parser.add_argument('-length', nargs=1, type=int)
         arg_parser.add_argument('-porter', action='store_true')
         arg_parser.add_argument('-stopwords', action='store_true')
-        arg_parser.add_argument('-stopwords_file', nargs=1,  default=['stopwords.txt'])
+        arg_parser.add_argument('-stopwords_file', nargs=1, default=['stopwords.txt'])
         arg_parser.add_argument('-search', action='store_true')
         arg_parser.add_argument('-mp', action='store_true')
         arg_parser.add_argument('-positions', action='store_true')
+        arg_parser.add_argument('-queries_file', nargs=1, default=['queries.txt'])
 
         try:
             args = arg_parser.parse_args()
@@ -58,6 +58,8 @@ class Main:
         if self.index_dir == "":
             self.index_dir = filename.split('/')[-1].split('.')[0]
         min_len = args.length[0] if args.min_length and args.length else None
+
+        self.queries_file = args.queries_file[0]
 
         return self.index_dir, filename, args.min_length, min_len, args.porter,\
             args.stopwords, args.stopwords_file[0], args.mp, args.positions
