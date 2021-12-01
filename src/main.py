@@ -45,6 +45,10 @@ class Main:
         arg_parser.add_argument('-mp', action='store_true')
         arg_parser.add_argument('-positions', action='store_true')
         arg_parser.add_argument('-queries_file', nargs=1, default=['queries.txt'])
+        arg_parser.add_argument('-ranking', nargs=1, choices=['BM25', 'VS'], default=['VS'])
+        arg_parser.add_argument('-k1', nargs=1, type=int, default=[1.2])
+        arg_parser.add_argument('-b', nargs=1, type=int, default=[0.75])
+        arg_parser.add_argument('-index_schema', nargs=1, type=str, default=["lnc.ltc"])
 
         try:
             args = arg_parser.parse_args()
@@ -61,8 +65,10 @@ class Main:
 
         self.queries_file = args.queries_file[0]
 
+        self.index_schema = args.index_schema[0]
+    
         return self.index_dir, filename, args.min_length, min_len, args.porter,\
-            args.stopwords, args.stopwords_file[0], args.mp, args.positions
+            args.stopwords, args.stopwords_file[0], args.mp, args.positions, args.ranking[0], self.index_schema, args.k1[0], args.b[0]
 
 
 if __name__ == "__main__":

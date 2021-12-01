@@ -11,8 +11,8 @@ import sys
 
 class Indexer:
 	def __init__(self, index_dir, file_name="amazon_reviews.tsv", min_length_filter=False,\
-		min_len=None, porter_filter=False, stop_words_filter=False,\
-		stopwords_file='stop_words.txt', map_reducer=False, positions=False):
+		min_len=None, porter_filter=False, stop_words_filter=False, stopwords_file='stop_words.txt',\
+		map_reducer=False, positions=False, ranking="VS", index_schema="lnc.ltc", k1=1.2, b=0.75):
 		logging.info(f"Indexer")
 		start_index_time = time.time()
 		
@@ -20,6 +20,15 @@ class Indexer:
 		self.indexer = defaultdict(lambda: [0, 0])
 
 		self.postings = defaultdict(lambda: defaultdict(lambda: [0, []]))
+		
+		self.ranking = ranking
+
+		if ranking == "BM25":
+			self.b = b
+			self.k1 = k1
+			self.docs_length = defaultdict(lambda : 0)
+			self.total_docs_length = 0
+			self.average_doc_len = 0
 
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
@@ -135,7 +144,7 @@ class Indexer:
 			else:
 				tokens = self.tokenizer.tokenize(input_string)
 				self.index_tokens(document_id=review_id, tokens=tokens)
-
+					
 				if self.has_passed_chunk_limit():
 					self.block_write_setup() 
 
@@ -147,6 +156,13 @@ class Indexer:
 
 		if self.map_reducer:
 			self.map_reducer.close_proc()
+
+		if self.ranking == "BM25":
+			self.average_doc_len = self.calc_average_doc_len()
+
+
+	def calc_average_doc_len(self):
+		return self.total_docs_length / self.n_docs
 
 
 	def call_map_reducer(self, input_documents):
@@ -170,14 +186,24 @@ class Indexer:
 
 	def index_tokens(self, document_id, tokens):
 		doc_sum_term_weights = 0
-		
+
+		if self.ranking == "BM25":
+			doc_length = len(tokens)
+			self.docs_length[document_id] = doc_length
+			self.total_docs_length += doc_length
+
 		for token, positions in tokens.items():
 			self.indexer[token][0] += 1
 			if self.store_positions:
 				self.postings[token][document_id][1] = positions
-			weight = 1 + log10(len(positions))
-			self.postings[token][document_id][0] = weight
-			doc_sum_term_weights += weight**2
+
+			if self.ranking == "VS":
+				weight = 1 + log10(len(positions))
+				self.postings[token][document_id][0] = weight
+				doc_sum_term_weights += weight**2
+			else:
+				self.postings[token][document_id][0] = len(positions)
+
 			self.num_stored_items += 1
 
 		if doc_sum_term_weights:
@@ -211,8 +237,18 @@ class Indexer:
 			for term, postings in sorted_terms:
 				self.indexer[term][1] = line
 				line += 1
-				idf = log10(self.n_docs / self.indexer[term][0])
-				f.write(f"{idf};{postings}\n")
+				if self.ranking == "VS":
+					idf = log10(self.n_docs / self.indexer[term][0])
+					f.write(f"{idf};{postings}\n")
+				else:
+					final_str = ''
+					docs_tf = [doc_tf.split(':') for doc_tf in postings.split(';')]
+					for doc_id, tf in docs_tf:
+						B = (1 - self.b) + self.b * self.docs_length[doc_id] / self.average_doc_len
+						tf_norm = int(tf) / B
+						c = log10(self.n_docs / self.indexer[term][0]) * (self.k1 + 1) * tf_norm / (self.k1 + tf_norm)
+						final_str += f"{doc_id}:{c};"
+					f.write(f"{final_str}\n")
 
 
 	def block_write_setup(self, processed_documents=None, map_red_index=False):
@@ -312,3 +348,5 @@ class Indexer:
 			if self.tokenizer.porter_filter: f.write(f"porter_filter\n")
 			if self.tokenizer.stop_words_filter: f.write(f"stop_words_filter\n")
 			if self.tokenizer.stop_words_file: f.write(f"stop_words_file:{self.tokenizer.stop_words_file}\n")
+			#TODO:
+			# escrever tb o ranking method
