@@ -61,7 +61,9 @@ class Search_Engine:
 			sys.exit(0)
 
 		for line in config_file:
+			
 			config = line[:-1].split(':')
+
 			if config[0] == "store_positions":
 				self.store_positions = True
 			elif config[0] == "min_length_filter":
