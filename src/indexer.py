@@ -187,11 +187,6 @@ class Indexer:
 	def index_tokens(self, document_id, tokens):
 		doc_sum_term_weights = 0
 
-		if self.ranking == "BM25":
-			doc_length = len(tokens)
-			self.docs_length[document_id] = doc_length
-			self.total_docs_length += doc_length
-
 		for token, positions in tokens.items():
 			self.indexer[token][0] += 1
 			if self.store_positions:
@@ -202,7 +197,10 @@ class Indexer:
 				self.postings[token][document_id][0] = weight
 				doc_sum_term_weights += weight**2
 			else:
-				self.postings[token][document_id][0] = len(positions)
+				tf = len(positions)
+				self.docs_length[document_id] += tf
+				self.total_docs_length += tf
+				self.postings[token][document_id][0] = tf
 
 			self.num_stored_items += 1
 
@@ -343,10 +341,10 @@ class Indexer:
 
 	def store_config(self):
 		with gzip.open(f"{self.CONFIG_DIR}config.txt.gz",'wt') as f:
+			f.write(f"ranking:{self.ranking}\n")
 			if self.store_positions: f.write(f"store_positions\n")
 			if self.tokenizer.min_length_filter: f.write(f"min_length_filter:{self.tokenizer.min_length}\n")
 			if self.tokenizer.porter_filter: f.write(f"porter_filter\n")
 			if self.tokenizer.stop_words_filter: f.write(f"stop_words_filter\n")
 			if self.tokenizer.stop_words_file: f.write(f"stop_words_file:{self.tokenizer.stop_words_file}\n")
-			#TODO:
-			# escrever tb o ranking method
+
