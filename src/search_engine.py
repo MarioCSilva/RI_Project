@@ -65,6 +65,8 @@ class Search_Engine:
 
             if config[0] == "ranking":
                 self.ranking = config[1]
+            elif config[0] == "index_schema":
+                self.index_schema = config[1]
             elif config[0] == "store_positions":
                 self.store_positions = True
             elif config[0] == "min_length_filter":
@@ -169,8 +171,11 @@ class Search_Engine:
             # doc_freq n é usado? deve depender do indexing schema
             doc_freq, idf, doc_weights = search_result
 
-            l = 1 + log10(len(positions))
-            weight = l
+            if self.index_schema == "lnc.ltc":
+                weight = 1 + log10(len(positions))
+            elif self.index_schema == "lnc.ntc":
+                weight = len(positions)
+            
             if not use_idf:
                 weight *= idf
 
@@ -207,7 +212,9 @@ class Search_Engine:
 
 
     def write_results_to_file(self, query_index, results_query):
-        with open(f"{self.QUERY_DIR}{self.ranking}_query_{query_index}", 'w+') as f:
+        filename = f"{self.QUERY_DIR}{self.ranking}_query_{query_index}" +\
+            f"_{self.index_schema}" if self.index_schema else ''
+        with open(filename, 'w+') as f:
             output = '\n'.join(results_query)
             f.write(f"{output}")
 

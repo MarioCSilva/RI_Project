@@ -342,6 +342,7 @@ class Indexer:
 	def store_config(self):
 		with gzip.open(f"{self.CONFIG_DIR}config.txt.gz",'wt') as f:
 			f.write(f"ranking:{self.ranking}\n")
+			if self.ranking == "VS": f.write(f"index_schema:{self.index_schema}\n")
 			if self.store_positions: f.write(f"store_positions\n")
 			if self.tokenizer.min_length_filter: f.write(f"min_length_filter:{self.tokenizer.min_length}\n")
 			if self.tokenizer.porter_filter: f.write(f"porter_filter\n")
