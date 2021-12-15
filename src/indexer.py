@@ -29,6 +29,8 @@ class Indexer:
 			self.docs_length = defaultdict(lambda : 0)
 			self.total_docs_length = 0
 			self.average_doc_len = 0
+		else:
+			self.index_schema = index_schema
 
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
@@ -237,7 +239,8 @@ class Indexer:
 				line += 1
 				if self.ranking == "VS":
 					idf = log10(self.n_docs / self.indexer[term][0])
-					f.write(f"{idf};{postings}\n")
+					self.indexer[term][0] = idf
+					f.write(f"{postings}\n")
 				else:
 					final_str = ''
 					docs_tf = [doc_tf.split(':') for doc_tf in postings.split(';')]
@@ -348,4 +351,3 @@ class Indexer:
 			if self.tokenizer.porter_filter: f.write(f"porter_filter\n")
 			if self.tokenizer.stop_words_filter: f.write(f"stop_words_filter\n")
 			if self.tokenizer.stop_words_file: f.write(f"stop_words_file:{self.tokenizer.stop_words_file}\n")
-

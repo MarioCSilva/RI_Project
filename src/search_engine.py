@@ -99,7 +99,7 @@ class Search_Engine:
             indexer_line = line[:-1].split(';')
             term = indexer_line[0]
             self.indexer[term][0], self.indexer[term][1] = \
-                int(indexer_line[1]), int(indexer_line[2])
+                float(indexer_line[1]), int(indexer_line[2])
 
 
     def get_partition_file(self, term):
@@ -117,9 +117,9 @@ class Search_Engine:
 
     @lru_cache(maxsize=50)
     def search_term(self, term):
-        doc_freq, partition_line = self.indexer[term]
+        idf, partition_line = self.indexer[term]
 
-        if doc_freq:
+        if idf:
             partition_file = self.get_partition_file(term)
             logging.info(f"Postings of '{term}' are indexed in the partition file '{partition_file}'")
 
@@ -134,13 +134,12 @@ class Search_Engine:
 
             if self.ranking == "VS":
                 doc_weights = {}
-                idf, postings_str = float(term_postings[0]), term_postings[1:]
-                
-                for doc_weight_str in postings_str:
+
+                for doc_weight_str in term_postings:
                     doc_weight_lst = doc_weight_str.split(':')
                     doc, weight = doc_weight_lst[0], float(doc_weight_lst[1])
                     doc_weights[doc] = weight
-                return doc_freq, idf, doc_weights
+                return idf, doc_weights
 
             doc_scores = {}
             for doc_score in term_postings:
@@ -167,9 +166,7 @@ class Search_Engine:
                 print(f"Term '{term}' not indexed.")
                 continue
 
-            # TODO:
-            # doc_freq n é usado? deve depender do indexing schema
-            doc_freq, idf, doc_weights = search_result
+            idf, doc_weights = search_result
 
             if self.index_schema == "lnc.ltc":
                 weight = 1 + log10(len(positions))
@@ -204,9 +201,9 @@ class Search_Engine:
             if not doc_scores:
                 print(f"Term '{term}' not indexed.")
                 continue
-                
+
             for doc_id, score in doc_scores.items():
-                scores[doc_id] += score
+                scores[doc_id] += score * len(positions)
         
         return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
 
