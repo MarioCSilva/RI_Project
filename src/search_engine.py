@@ -25,7 +25,7 @@ class Search_Engine:
         self.indexer = defaultdict(lambda: [0, 0])
 
         self.store_positions = False
-
+        self.index_schema = None
         self.tokenizer = self.read_config()
 
         self.queries_file = queries_file
@@ -209,8 +209,8 @@ class Search_Engine:
 
 
     def write_results_to_file(self, query_index, results_query):
-        filename = f"{self.QUERY_DIR}{self.ranking}_query_{query_index}" +\
-            f"_{self.index_schema}" if self.index_schema else ''
+        index_schema = f'_{self.index_schema}' if self.index_schema else ''
+        filename = f"{self.QUERY_DIR}{self.ranking}_query_{query_index}{index_schema}"
         with open(filename, 'w+') as f:
             output = '\n'.join(results_query)
             f.write(f"{output}")
