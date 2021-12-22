@@ -22,6 +22,9 @@ class Tokenizer:
         self.max_length = 27
 
         self.stop_words_file = None
+
+        # regex normalizer
+        self.rgx = re.compile("(\w[\w']*\w|\w)")
         
         # initialize Stop Words and Porter Filter if needed
         self.init_min_len_filter(length=min_length)
@@ -57,9 +60,10 @@ class Tokenizer:
     def tokenize(self, input_string) -> list():
         final_tokens = defaultdict(list)
 
-        tokens = input_string.split()
-        
-        tokens = [re.sub("[^0-9a-z]+"," ", token.lower()).split() for token in tokens]
+        # tokens = input_string.split()
+        tokens = re.findall(self.rgx, input_string)
+
+        tokens = [re.sub("[^0-9a-z'_-]+"," ", token.lower()).split() for token in tokens]
         tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
 
         for index, token in enumerate(tokens):

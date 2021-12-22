@@ -18,7 +18,7 @@ class Search_Engine:
         self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
         self.CONFIG_DIR = f"{self.INDEX_DIR}/config/"
 
-        self.QUERY_DIR = f"{self.INDEX_DIR}/queries_results/"
+        self.QUERY_DIR = f"{self.INDEX_DIR}/search_engine/"
 
         self.check_dir_exist(self.QUERY_DIR)
 
@@ -159,6 +159,7 @@ class Search_Engine:
             use_idf = False
 
         cos_norm_value = 0
+
         for term, positions in tokenized_query.items():
             search_result = self.search_term(term)
 
@@ -167,21 +168,31 @@ class Search_Engine:
                 continue
 
             idf, doc_weights = search_result
+            tf = len(positions)
 
-            if self.index_schema == "lnc.ltc":
-                weight = 1 + log10(len(positions))
-            elif self.index_schema == "lnc.ntc":
-                weight = len(positions)
-            
-            if not use_idf:
+            if self.index_schema[4] == 'l':
+                weight = 1 + log10(tf)
+            elif self.index_schema[4] == 'n':
+                weight = tf
+# Possible search schemas
+# ltc
+# ltn
+# lnn
+# lnc
+# ntn
+# ntc
+# nnn
+# nnc
+            if self.index_schema[5] == 't' and use_idf:
                 weight *= idf
 
-            cos_norm_value += weight ** 2
+            if self.index_schema[6] == "c":
+                cos_norm_value += weight ** 2
 
             for doc, doc_weight in doc_weights.items():
                 scores[doc] += doc_weight * weight
 
-        if cos_norm_value:
+        if self.index_schema[6] == "c" and cos_norm_value:
             cos_norm_value = 1 / sqrt(cos_norm_value)
 
             for doc in scores.keys():
@@ -197,23 +208,22 @@ class Search_Engine:
 
         for term, positions in tokenized_query.items():
             doc_scores = self.search_term(term)
+            tf = len(positions)
 
             if not doc_scores:
                 print(f"Term '{term}' not indexed.")
                 continue
 
             for doc_id, score in doc_scores.items():
-                scores[doc_id] += score * len(positions)
+                scores[doc_id] += score * tf
         
         return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
 
 
-    def write_results_to_file(self, query_index, results_query):
-        index_schema = f'_{self.index_schema}' if self.index_schema else ''
-        filename = f"{self.QUERY_DIR}{self.ranking}_query_{query_index}{index_schema}"
-        with open(filename, 'w+') as f:
-            output = '\n'.join(results_query)
-            f.write(f"{output}")
+    def write_results_to_file(self, queries_results_file, query, results_query):
+        queries_results_file.write(f"Q: {query}\n")
+        results = '\n'.join(results_query)
+        queries_results_file.write(f"{results}\n")
 
 
     def search_queries(self):
@@ -222,8 +232,14 @@ class Search_Engine:
         except FileNotFoundError:
             logging.info("File for queries not found.")
             sys.exit()
+        
+        index_schema = f'_{self.index_schema}' if self.index_schema else ''
+        filename = f"{self.QUERY_DIR}queries_results_{self.ranking}{index_schema}.txt"
+        queries_results_file = open(filename, 'w+')
 
-        for index, query in enumerate(queries_file):
-            results_query = self.handle_query_vs(query) if self.ranking == "VS" else self.handle_query_bm25(query)
+        for query in queries_file:
+            query = query[:-1] if query[-1] == "\n" else query
+            results_query = self.handle_query_vs(query)if self.ranking == "VS"\
+                else self.handle_query_bm25(query)
 
-            self.write_results_to_file(index, results_query)
+            self.write_results_to_file(queries_results_file, query, results_query)

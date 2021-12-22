@@ -128,7 +128,7 @@ class Indexer:
 		for paragraph in data_set:
 			paragraph = paragraph.split("\t")
 			review_id, input_string = paragraph[2],\
-				f"{paragraph[-3]} {paragraph[-2]}"
+				f"{paragraph[5]} {paragraph[-3]} {paragraph[-2]}"
 
 			self.n_docs+=1
 

@@ -44,7 +44,7 @@ class Main:
         arg_parser.add_argument('-search', action='store_true')
         arg_parser.add_argument('-mp', action='store_true')
         arg_parser.add_argument('-positions', action='store_true')
-        arg_parser.add_argument('-queries_file', nargs=1, default=['queries.txt'])
+        arg_parser.add_argument('-queries_file', nargs=1, default=['../queries.txt'])
         arg_parser.add_argument('-ranking', nargs=1, choices=['BM25', 'VS'], default=['VS'])
         arg_parser.add_argument('-k1', nargs=1, type=int, default=[1.2])
         arg_parser.add_argument('-b', nargs=1, type=int, default=[0.75])
