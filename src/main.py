@@ -17,16 +17,21 @@ class Main:
 
     def usage(self):
         print("Usage: python3 main.py\
-            \n\t-i <Directory name for indexation:str>\
-            \n\t-f <File Name (Path) for data set:str>\
-            \n\t-m <Minimum Length Filter>\
-            \n\t-l <Length for Minimum Length Filter:int>\
+            \n\t-index_dir <Directory name for indexation:str>\
+            \n\t-filename <File Name (Path) for data set:str>\
+            \n\t-min_length <Minimum Length Filter>\
+            \n\t-length <Length for Minimum Length Filter:int>\
             \n\t-porter <Porter Stemmer Filter>\
             \n\t-stopwords <Stop Words Filter>\
             \n\t-stopwords_file <Stop Words File>\
             \n\t-mp <Map Reduce>\
-            \n\t-search <Search Engine>\
-            \n\t-positions <Store term's positions in postings>")
+            \n\t-positions <Store term's positions in postings>\
+            \n\t-search <Search Engine to Get Queries Results>\
+            \n\t-ranking <Store term's positions in postings>\
+            \n\t-queries_file <File Name (Path) for Queries:str>\
+            \n\t-k1 <k1 value for BM25:float>\
+            \n\t-b <B value for BM25:float>\
+            \n\t-schema <Indexing Schema:str> Example: lnc.ltc")
 
 
     def check_arguments(self):
@@ -48,7 +53,7 @@ class Main:
         arg_parser.add_argument('-ranking', nargs=1, choices=['BM25', 'VS'], default=['VS'])
         arg_parser.add_argument('-k1', nargs=1, type=int, default=[1.2])
         arg_parser.add_argument('-b', nargs=1, type=int, default=[0.75])
-        arg_parser.add_argument('-schema', nargs=1, choices=['lnc.ltc', 'lnc.ntc'], type=str, default=["lnc.ltc"])
+        arg_parser.add_argument('-schema', nargs=1, type=str, default=["lnc.ltc"])
 
         try:
             args = arg_parser.parse_args()
@@ -63,10 +68,18 @@ class Main:
             self.index_dir = filename.split('/')[-1].split('.')[0]
         min_len = args.length[0] if args.min_length and args.length else None
 
+        schema = args.schema[0]
+       
+        schemas = schema.split(".")
+        if len(schemas) != 2 or schemas[0] not in ["lnc", "lnn", "nnc", "nnn"] or \
+            schemas[1] not in ["ltc", "ltn", "lnn", "lnc", "ntn", "ntc", "nnn", "nnc"]:
+            print("Indexing Schema not supported")
+            sys.exit(1)
+
         self.queries_file = args.queries_file[0]
     
         return self.index_dir, filename, args.min_length, min_len, args.porter,\
-            args.stopwords, args.stopwords_file[0], args.mp, args.positions, args.ranking[0], args.schema[0], args.k1[0], args.b[0]
+            args.stopwords, args.stopwords_file[0], args.mp, args.positions, args.ranking[0], schema, args.k1[0], args.b[0]
 
 
 if __name__ == "__main__":

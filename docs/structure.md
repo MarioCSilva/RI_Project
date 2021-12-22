@@ -4,7 +4,12 @@ This class has the main goal to index all terms found on each dataset, and write
 
 - Parse file and index terms and postings:
 
-    Starts off by parsing the file and obtain all tokens, recurring to the Tokenizer Class, as well as its documents references and, optionally, the positions on those documents. 
+    Starts off by parsing the file and obtain all tokens, recurring to the Tokenizer Class, as well as its documents references and, optionally, the positions on those documents.
+
+- Calculate rankings:
+
+    If the ranking system is VS
+    If the ranking system is 
     
 - Write postings to temporary block files (terms sorted alphabetically):
 
@@ -21,6 +26,10 @@ This class has the main goal to index all terms found on each dataset, and write
 - Store indexer data structure in a file:
 
     This structure is a dictionary with the terms as key, and as value, the document frequency, as well as the line the term is written on the partition file.
+
+- Store configuration metadata for the search engine:
+    Once the merge has been completed, a new directory and consequently a new file is created on disk containing metadata that will be useful for the Search Engine, such as which filters were used, ranking strategy choosen and others.
+    
 
 
 ## Class Tokenizer:
@@ -71,4 +80,14 @@ This task is computed simultaneously by 4 processes that are launched with this 
 
 ## Class Search Engine:
 
-- Once the Indexing of a certain dataset has finished, using the Search Engine module, it is possible to query a term, and check its number of occurrences. Besides this, the total time needed to load the indexer is outputted.
+- Once the Indexing of a certain dataset has finished, using the Search Engine module, it is possible to read a file with queries.
+
+- To do so, this module starts by reading a configuration  containing all relevant characteristics for the indexing process(usage of filters, ranking strategy, indexing schema,..).
+
+- After that it loads the indexer data structure, which is a dictionary with every term indexed as key and for the value it has the idf associated to the term if the ranking system is Vector Space or the term frequency if it is the BM25, and it also has the line that the postings list of this term was written.
+
+- To get the document scores of a term, first it is necessary to get partition file by comparing the term with the first word of a partition file and the last word to find which partition file the term is indexed. After that, it needs to get the postings list of the term, which is done by reading every line until the line that is obtained from the indexer data structure mentioned before. Then it calculates the documents scores based on the ranking system.
+
+- A Least Recently Used Cache is used to store, in our case, 50, the document scores associated to the term from the queries that are being processed. Ideally should be the most recurrent terms in all searchs queries, but since we don't have a query log to analyze this, it is a simple cache that stores the last ones.
+
+- The results of the top 100 most relevant documents with the highest scores, acording to the ranking strategy that has been choosen from the user back on the indexation process, are written on the choosen indexing directoring, on the `search_engine` subfolder.

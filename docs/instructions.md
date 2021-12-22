@@ -16,14 +16,34 @@ python3 main.py
 
 - Additional arguments:
 ```
-    -i <Directory name for indexation:str>
-    -f <File Name (Path) for data set:str>
-    -mi <Minimum Length Filter>
-    -l <Length for Minimum Length Filter:int>
-    -por <Porter Stemmer Filter>
+    -index_dir <Directory name for indexation:str>
+    -filename <File Name (Path) for data set:str>
+    -min_length <Minimum Length Filter>
+    -length <Length for Minimum Length Filter:int>
+    -porter <Porter Stemmer Filter>
     -stopwords <Stop Words Filter>
     -stopwords_file <Stop Words File>
     -mp <Map Reduce>
-    -search <Search Engine>
-    -pos <Store term's positions in postings>
+    -positions <Store term's positions in postings>
+    -search <Search Engine to Get Queries Results>
+    -ranking <Ranking Algorithm:str>
+    -queries_file <File Name (Path) for Queries:str>
+    -k1 <k1 value for BM25:float>
+    -b <B value for BM25:float>
+    -schema <Indexing Schema:str> Example: lnc.ltc
 ```
+
+- For a more complex running example consider the following one. 
+  - Indexing:
+    ```bash
+    python3 main.py -index_dir games_lnc_ltc -schema lnc.ltc -min -len 3
+    ```
+
+  - Searching:
+    ```bash
+    python3 main.py -index_dir games_lnc_ltc -search -queries_file ../queries.txt
+    ```
+
+## Important Notes
+- For this assignment the `Map Reduce` option  was not updated, thus it is only working for the purposes of the first assignment
+- The results of the queries using BM25 and Vector Space ( with lnc.ltc indexing schema) are stored in the `music_bm25` and `music_lncltc` folders, respetively,inside the `search_engine`subfolder.

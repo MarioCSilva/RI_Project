@@ -1,3 +1,5 @@
+# Indexation Statistics for 1st Assignment
+
 In this part we gather statistics like the following:
 
 a) Total indexing time. (No filters)

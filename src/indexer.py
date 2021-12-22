@@ -190,7 +190,7 @@ class Indexer:
 		doc_sum_term_weights = 0
 
 		for token, positions in tokens.items():
-			tf = tf
+			tf = len(positions)
 
 			self.indexer[token][0] += 1
 			if self.store_positions:
@@ -209,11 +209,7 @@ class Indexer:
 				self.docs_length[document_id] += tf
 				self.total_docs_length += tf
 				self.postings[token][document_id][0] = tf
-# Possible
-# lnc
-# lnn
-# nnc
-# nnn
+
 			self.num_stored_items += 1
 
 		if doc_sum_term_weights and self.index_schema[2] == "c":
