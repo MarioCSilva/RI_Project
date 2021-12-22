@@ -210,10 +210,10 @@ class Indexer:
 				self.total_docs_length += tf
 				self.postings[token][document_id][0] = tf
 # Possible
-# ltc
-# ltn
-# ntc
-# ntn
+# lnc
+# lnn
+# nnc
+# nnn
 			self.num_stored_items += 1
 
 		if doc_sum_term_weights and self.index_schema[2] == "c":
