@@ -60,7 +60,6 @@ class Tokenizer:
     def tokenize(self, input_string) -> list():
         final_tokens = defaultdict(list)
 
-        # tokens = input_string.split()
         tokens = re.findall(self.rgx, input_string)
 
         tokens = [re.sub("[^0-9a-z'_-]+"," ", token.lower()).split() for token in tokens]

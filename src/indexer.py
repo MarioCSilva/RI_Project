@@ -190,23 +190,33 @@ class Indexer:
 		doc_sum_term_weights = 0
 
 		for token, positions in tokens.items():
+			tf = tf
+
 			self.indexer[token][0] += 1
 			if self.store_positions:
 				self.postings[token][document_id][1] = positions
 
 			if self.ranking == "VS":
-				weight = 1 + log10(len(positions))
+				if self.index_schema[0] == "l":
+					weight = 1 + log10(tf)
+				elif self.index_schema[0] == "n":
+					weight = tf
 				self.postings[token][document_id][0] = weight
-				doc_sum_term_weights += weight**2
-			else:
-				tf = len(positions)
+				
+				if self.index_schema[2] == "c":
+					doc_sum_term_weights += weight**2
+			elif self.ranking == "BM25":
 				self.docs_length[document_id] += tf
 				self.total_docs_length += tf
 				self.postings[token][document_id][0] = tf
-
+# Possible
+# ltc
+# ltn
+# ntc
+# ntn
 			self.num_stored_items += 1
 
-		if doc_sum_term_weights:
+		if doc_sum_term_weights and self.index_schema[2] == "c":
 			cos_norm = 1 / sqrt(doc_sum_term_weights)
 
 			for token, _ in tokens.items():
