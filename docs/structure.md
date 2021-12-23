@@ -20,7 +20,7 @@ This class has the main goal to index all terms found on each dataset, and write
 
 - Store indexer data structure in a file:
 
-    This structure is a dictionary with the terms as key, and as value, the document frequency, as well as the line the term is written on the partition file.
+    This structure is a dictionary with the terms as key, and as value, the inverse document frequency (idf), as well as the line the term is written on the partition file.
 
 - Store Document Mapper structure in a file:
 
@@ -30,7 +30,9 @@ This class has the main goal to index all terms found on each dataset, and write
 - Store configuration metadata for the search engine:
     Once the merge has been completed, a new directory and consequently a new file is created on disk containing metadata that will be useful for the Search Engine, such as which filters were used, ranking strategy choosen and others.
     
+Note:
 
+The weights of the documents of the posting lists and the idf stored in the indexer data structure are rounded to 6 decimal cases to occupy less disk space.
 
 ## Class Tokenizer:
 

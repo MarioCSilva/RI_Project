@@ -25,12 +25,15 @@ class Indexer:
 		
 		self.ranking = ranking
 
+		# Initalizes BM25 variables and data structures
 		if ranking == "BM25":
 			self.b = b
 			self.k1 = k1
 			self.docs_length = defaultdict(lambda : 0)
 			self.total_docs_length = 0
 			self.average_doc_len = 0
+		# Otherwise Vector Space strategy will be used, and consequently
+		# it is stored the indexing schema to be used
 		else:
 			self.index_schema = index_schema
 
@@ -103,6 +106,7 @@ class Indexer:
 
 
 	def get_statistics(self, total_index_time):
+
 		block_files_dir = os.listdir(self.PARTITION_DIR)
 
 		files_size = sum([os.path.getsize(f"{self.PARTITION_DIR}{f}") for f in block_files_dir])
@@ -117,6 +121,10 @@ class Indexer:
 
 
 	def check_dir_exist(self, directories):
+		"""
+		@param directories: a list of directories names
+		Verifies if each directory already exists, else it is created
+		"""
 		for diretory in directories:
 			if not os.path.exists(diretory):
 				os.mkdir(diretory)
@@ -127,6 +135,9 @@ class Indexer:
 
 
 	def get_next_id(self):
+		"""
+		Generates a compact ID to identify each review
+		"""
 		if self.n_docs == 0:
 			return "0"
 		result = ""
@@ -139,6 +150,9 @@ class Indexer:
 
 
 	def parse_and_index(self):
+		"""
+		Parses the dataset and starts the indexing Process
+		"""
 		data_set = open(self.file_name, 'r', encoding='utf-8')
 		# ignore headers
 		data_set.readline()
@@ -151,6 +165,7 @@ class Indexer:
 			review_id, input_string = paragraph[2],\
 				f"{paragraph[5]} {paragraph[-3]} {paragraph[-2]}"
 
+			# compact id to identify each review
 			generated_id = self.get_next_id()
 
 			self.doc_mapping[generated_id] = review_id
@@ -171,7 +186,7 @@ class Indexer:
 			else:
 				tokens = self.tokenizer.tokenize(input_string)
 				self.index_tokens(document_id=generated_id, tokens=tokens)
-
+				# if the chunk limit is reached, a new temporary block is written on disk
 				if self.has_passed_chunk_limit():
 					self.block_write_setup() 
 
@@ -189,6 +204,9 @@ class Indexer:
 
 
 	def calc_average_doc_len(self):
+		"""
+		Calculates average document length to be used in the BM25
+		"""
 		return self.total_docs_length / self.n_docs
 
 
@@ -212,18 +230,29 @@ class Indexer:
 
 
 	def index_tokens(self, document_id, tokens):
+		"""
+		Indexes the tokens on correct the data structures, to be later on
+		written to disk. Does the weight calculation of the terms, according to the 
+		ranking strategy to be used.
+		"""
 		doc_sum_term_weights = 0
 
 		for token, positions in tokens.items():
+			# to calculate the term frequency, 
+			# counting the number of times the token has appeared on the document is enough
 			tf = len(positions)
 
 			self.indexer[token][0] += 1
 
 			if self.store_positions:
-				self.postings[token][document_id][1] = positions
 
+				self.postings[token][document_id][1] = positions
+			# Weight calculation, 
 			if self.ranking == "VS":
+				# weights calculation depends on the indexing schema choosen on Vector Space
 				if self.index_schema[0] == "l":
+					# rounding the values,
+					# will help reducing the disk usage when the weights will be written to disk
 					weight = round(1 + log10(tf), 6)
 				elif self.index_schema[0] == "n":
 					weight = tf
@@ -239,6 +268,7 @@ class Indexer:
 
 			self.num_stored_items += 1
 
+		# Normalization of the weights
 		if doc_sum_term_weights and self.index_schema[2] == "c":
 			cos_norm = 1 / sqrt(doc_sum_term_weights)
 
@@ -251,6 +281,9 @@ class Indexer:
 
 
 	def write_block_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt', map_red_index=False):
+		"""
+		Writes temporary Blocks with the postings to the disk
+		"""
 		with  open(output_file,'w+') as f:
 			if map_red_index:
 				for term, postings, num_occ in sorted_terms:
@@ -265,6 +298,9 @@ class Indexer:
 
 
 	def write_partition_to_disk(self, sorted_terms, output_file='./posting_blocks/block.txt.gz', map_red_index=False):
+		"""
+		Writes final partition files to disk
+		"""
 		with gzip.open(output_file,'wt') as f:
 			line = 0
 			for term, postings in sorted_terms:
@@ -275,6 +311,7 @@ class Indexer:
 				if self.ranking == "VS":
 					f.write(f"{postings}\n")
 				else:
+					# BM25 final weight calculation
 					final_str = ''
 					docs_tf = [doc_tf.split(':') for doc_tf in postings.split(';')]
 					for doc_id, tf in docs_tf:
@@ -296,12 +333,15 @@ class Indexer:
 			sorted_terms = self.sort_terms(self.postings.items())
 			self.postings = defaultdict(lambda: defaultdict(lambda: [0, []]))
 		self.write_block_to_disk(sorted_terms=sorted_terms, output_file=output_file, map_red_index=map_red_index)
-
+		# resets chunk counter
 		self.num_stored_items = 0
 		self.block_id += 1
 
 
 	def merge_blocks(self):
+		"""
+		Merges the temporary blocks into partition files
+		"""
 		block_files_dir = os.listdir(self.POSTINGS_DIR)
 		block_files = [open(self.POSTINGS_DIR+filename, 'r') for filename in block_files_dir]
 		block_postings = [block_file.readline()[:-1] for block_file in block_files]
@@ -350,6 +390,10 @@ class Indexer:
 
 
 	def clear_blocks(self):
+		"""
+		Removes from disk temporary blocks, 
+		since they are no longer needed after the merge porcess 
+		"""
 		block_files_dir = os.listdir(self.POSTINGS_DIR)
 		block_files = [ filename for filename in block_files_dir]
 		temp = block_files
@@ -371,18 +415,27 @@ class Indexer:
 
 
 	def store_indexer(self):
+		"""
+		Writes Indexer to disk to be used by the Search engine 
+		"""
 		with gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz",'wt') as f:
 			for term, freq_pos in self.indexer.items():
 				f.write(f"{term};{str(freq_pos[0])};{str(freq_pos[1])}\n")
 	
 
 	def store_doc_mapping(self):
+		"""
+		Writes Document Mapper to disk to be used by the search engine 
+		"""
 		with gzip.open(f"{self.INDEXER_DIR}doc_mapping.txt.gz",'wt') as f:
 			for _id, review_id in self.doc_mapping.items():
 				f.write(f"{_id};{review_id}\n")
 
 
 	def store_config(self):
+		"""
+		Writes Configuration Metadata to disk to be used by the search engine 
+		"""
 		with gzip.open(f"{self.CONFIG_DIR}config.txt.gz",'wt') as f:
 			f.write(f"ranking:{self.ranking}\n")
 			if self.ranking == "VS": f.write(f"index_schema:{self.index_schema}\n")

@@ -125,7 +125,7 @@ class Search_Engine:
             doc_mapping_line = line[:-1].split(';')
             self.doc_mapping[doc_mapping_line[0]] = doc_mapping_line[1]
 
-
+    """ Finds the partition file in which the term is indexed"""
     def get_partition_file(self, term):
         for file in os.listdir(self.PARTITION_DIR):
             first_term, last_term = file.split('.')[0].split(' ')
@@ -141,6 +141,11 @@ class Search_Engine:
 
     @lru_cache(maxsize=50)
     def search_term(self, term):
+        """
+        Find the terms partition and retrieves the document weights
+        for the term in cause, according to the ranking strategy.
+        Has a Least Recently Used cache.
+        """
         idf, partition_line = self.indexer[term]
 
         if idf:
@@ -163,8 +168,10 @@ class Search_Engine:
                     doc_weight = doc_weight_str.split(':')
                     doc, weight = self.doc_mapping[doc_weight[0]], float(doc_weight[1])
                     doc_weights[doc] = weight
+                # In Vector Space, we need to retrieve also the Idf of the term
                 return idf, doc_weights
 
+            # BM25
             doc_scores = {}
             for doc_score in term_postings:
                 doc_id, score = doc_score.split(":")
@@ -173,12 +180,18 @@ class Search_Engine:
 
 
     def handle_query_vs(self, query):
+        """
+        Calculates the final score of each document for the query
+        and retrieves a list with the 100 most relevant document,
+        using the VS Strategy, with the choosen Indexing schema
+        """
         use_idf = True
 
         scores = defaultdict(lambda: 0)
 
         tokenized_query = self.tokenizer.tokenize(query)
 
+        # if the query has only one term there's no need to use idf
         if len(tokenized_query) == 1:
             use_idf = False
 
@@ -207,7 +220,7 @@ class Search_Engine:
 
             for doc, doc_weight in doc_weights.items():
                 scores[doc] += doc_weight * weight
-
+                
         if self.index_schema[6] == "c" and cos_norm_value:
             cos_norm_value = 1 / sqrt(cos_norm_value)
 
@@ -218,6 +231,11 @@ class Search_Engine:
 
 
     def handle_query_bm25(self, query):
+        """
+        Calculates the final score of each document for the query
+        and retrieves a list with the 100 most relevant document,
+        using the BM25 Strategy
+        """
         scores = defaultdict(lambda: 0)
 
         tokenized_query = self.tokenizer.tokenize(query)
@@ -243,6 +261,10 @@ class Search_Engine:
 
 
     def search_queries(self):
+        """
+        Loads a file with a query in each line, and writes to the disk the most relevant documents
+        according to the choosen ranking strategy.
+        """
         try:
             queries_file = open(self.queries_file, "r")
         except FileNotFoundError:

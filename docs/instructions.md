@@ -36,12 +36,12 @@ python3 main.py
 - For a more complex running example consider the following one. 
   - Indexing:
     ```bash
-    python3 main.py -index_dir games_lnc_ltc -schema lnc.ltc -min -len 3
+    python3 main.py -index_dir example_games_lncltc -schema lnc.ltc -min -len 3
     ```
 
   - Searching:
     ```bash
-    python3 main.py -index_dir games_lnc_ltc -search -queries_file ../queries.txt
+    python3 main.py -index_dir example_games_lncltc -search -queries_file ../queries.txt
     ```
 
 ## Important Notes
