@@ -3,13 +3,19 @@
 
 | Dataset                                  |   Video Games      |     Video Games    |   Digital Music    |    Digital Music   |
 |------------------------------------------|--------------------|--------------------|--------------------|--------------------|
-| Ranking                                  |     Vector Space   |     Vector Space   |     Vector Space   |     Vector Space   |
-| Index Schema                             |       lnc.ltc      |       lnc.ltc      |       lnc.ltc      |       lnc.ltc      |
+| Ranking                                  |     Vector Space   |     BM25   |     Vector Space   |      BM25   |
+| Index Schema                             |       lnc.ltc      |       :x:      |       lnc.ltc      |      :x:    |
 | Minimum Length Filter: 3                 | ✔️ | ✔️ | ✔️ | ✔️ |
-| Total indexing time                      |    100.64 seconds   |    88.52 seconds   |    854.57 seconds   |     946.77 seconds   |
-| Total index size on disk                 |    103.37 MBs   |    85.18 MBs   |    848.57 MBs   |    661.90 MBs   |
-| Vocabulary size                          |     73904       |     73904       |     399144       |     399144       |
-| Temporary index segments written to disk |       6         |       6         |       51         |       51         |
-| Time to start up an index searcher       |    0.13 seconds  |    0.13 seconds  |    1.00 seconds  |    0.96 seconds  |
-| Total time to handle 15 queries          |    12.46 seconds |    11.34 seconds |    17.26 seconds |    12.99 seconds |
-| Average time to handle a single query    |    0.83 seconds  |    0.76 seconds  |    1.15 seconds  |    0.87 seconds  |
+| Stop Words                               | ✔️ | ✔️ | ✔️ | ✔️ |
+| Total indexing time                      |   71.27 seconds    |    66.98 seconds |    879.74 seconds   |     829.73 seconds   |
+| Total index size on disk                 |    27.23 MBs       |    23.40 MBs     |    226.99 MBs   |    185.01 MBs   |
+| Vocabulary size                          |     76513          |     76513        |     425072       |     425072       |
+| Temporary index segments written to disk |       5            |       5          |       38         |       38         |
+| Time to start up an index searcher       |    0.27 seconds    |    0.27 seconds  |    2.59 seconds  |    2.57 seconds  |
+| Total time to handle 15 queries          |    1.92 seconds    |    1.72 seconds  |    10.45 seconds |    7.92 seconds |
+| Average time to handle a single query    |    0.12 seconds    |    0.11 seconds  |    0.70 seconds  |    0.53 seconds  |
+
+# TODO:
+# Analysis of Query Results
+# meter comentarios no codigo i guess
+# talvez escrever temporariamente os dict (shotless)

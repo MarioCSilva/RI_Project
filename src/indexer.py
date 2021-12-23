@@ -18,6 +18,8 @@ class Indexer:
 		
 		# data structures
 		self.indexer = defaultdict(lambda: [0, 0])
+		
+		self.doc_mapping = {}
 
 		self.postings = defaultdict(lambda: defaultdict(lambda: [0, []]))
 		
@@ -35,7 +37,7 @@ class Indexer:
 		# init tokenizer
 		self.tokenizer = Tokenizer(min_length_filter, min_len, porter_filter,\
 			stop_words_filter, stopwords_file)
-		
+
 		self.store_positions = positions
 
 		# get process
@@ -61,11 +63,15 @@ class Indexer:
 
 		# number of documents
 		self.n_docs = 0
-		
+
+		# chars to be used for generating ids for document mapping
+		self.CHARS = '!"#$%&\'()*+,-./0123456789<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+		self.CHARS_LENGTH = len(self.CHARS)
+
 		# maximum number of tokens's postings stored in memory
-		self.MAX_CHUNK_LIMIT = 1000000
+		self.MAX_CHUNK_LIMIT = 1_000_000
 		# maximum number of documents for map reduce to handle
-		self.MAX_DOCS_LIMIT = 100000
+		self.MAX_DOCS_LIMIT = 100_000
 
 		self.map_reducer = map_reducer
 		if map_reducer:
@@ -84,6 +90,9 @@ class Indexer:
 		# store indexer data structure in a file
 		self.store_indexer()
 
+		# store Document Mapper structure in a file
+		self.store_doc_mapping()
+
 		# store important flags/configurations to be used in the search engine
 		self.store_config()
 
@@ -96,7 +105,7 @@ class Indexer:
 	def get_statistics(self, total_index_time):
 		block_files_dir = os.listdir(self.PARTITION_DIR)
 
-		files_size = sum([os.path.getsize(f"{self.PARTITION_DIR}{f}") for  f in block_files_dir])
+		files_size = sum([os.path.getsize(f"{self.PARTITION_DIR}{f}") for f in block_files_dir])
 
 		logging.info(f"a) Total indexing time: {total_index_time:.5f} seconds")
 
@@ -117,6 +126,18 @@ class Indexer:
 					sys.exit()
 
 
+	def get_next_id(self):
+		if self.n_docs == 0:
+			return "0"
+		result = ""
+		remain = self.n_docs
+		while remain > 0:
+			pos = remain % self.CHARS_LENGTH
+			remain = remain // self.CHARS_LENGTH
+			result = self.CHARS[pos] + result
+		return result
+
+
 	def parse_and_index(self):
 		data_set = open(self.file_name, 'r', encoding='utf-8')
 		# ignore headers
@@ -130,11 +151,15 @@ class Indexer:
 			review_id, input_string = paragraph[2],\
 				f"{paragraph[5]} {paragraph[-3]} {paragraph[-2]}"
 
-			self.n_docs+=1
+			generated_id = self.get_next_id()
+
+			self.doc_mapping[generated_id] = review_id
+
+			self.n_docs += 1
 
 			if self.map_reducer:
 				self.num_stored_items += 1
-				input_documents.append( (review_id, input_string) )
+				input_documents.append( (self.doc_mapping[review_id], input_string) )
 
 				if self.has_passed_chunk_limit(True):
 					logging.info("Sending data to map reducer")
@@ -145,8 +170,8 @@ class Indexer:
 					self.block_write_setup(processed_documents, True)
 			else:
 				tokens = self.tokenizer.tokenize(input_string)
-				self.index_tokens(document_id=review_id, tokens=tokens)
-					
+				self.index_tokens(document_id=generated_id, tokens=tokens)
+
 				if self.has_passed_chunk_limit():
 					self.block_write_setup() 
 
@@ -193,18 +218,20 @@ class Indexer:
 			tf = len(positions)
 
 			self.indexer[token][0] += 1
+
 			if self.store_positions:
 				self.postings[token][document_id][1] = positions
 
 			if self.ranking == "VS":
 				if self.index_schema[0] == "l":
-					weight = 1 + log10(tf)
+					weight = round(1 + log10(tf), 6)
 				elif self.index_schema[0] == "n":
 					weight = tf
 				self.postings[token][document_id][0] = weight
-				
+
 				if self.index_schema[2] == "c":
 					doc_sum_term_weights += weight**2
+
 			elif self.ranking == "BM25":
 				self.docs_length[document_id] += tf
 				self.total_docs_length += tf
@@ -216,7 +243,7 @@ class Indexer:
 			cos_norm = 1 / sqrt(doc_sum_term_weights)
 
 			for token, _ in tokens.items():
-				self.postings[token][document_id][0] *= cos_norm
+				self.postings[token][document_id][0] *= round(cos_norm, 6)
 
 
 	def sort_terms(self, postings_lst):
@@ -243,9 +270,9 @@ class Indexer:
 			for term, postings in sorted_terms:
 				self.indexer[term][1] = line
 				line += 1
+				idf = log10(self.n_docs / self.indexer[term][0])
+				self.indexer[term][0] = round(idf, 6)
 				if self.ranking == "VS":
-					idf = log10(self.n_docs / self.indexer[term][0])
-					self.indexer[term][0] = idf
 					f.write(f"{postings}\n")
 				else:
 					final_str = ''
@@ -253,7 +280,7 @@ class Indexer:
 					for doc_id, tf in docs_tf:
 						B = (1 - self.b) + self.b * self.docs_length[doc_id] / self.average_doc_len
 						tf_norm = int(tf) / B
-						c = log10(self.n_docs / self.indexer[term][0]) * (self.k1 + 1) * tf_norm / (self.k1 + tf_norm)
+						c = round(idf * (self.k1 + 1) * tf_norm / (self.k1 + tf_norm), 6)
 						final_str += f"{doc_id}:{c};"
 					f.write(f"{final_str}\n")
 
@@ -293,17 +320,18 @@ class Indexer:
 
 			# write partition of postings to disk when
 			# finds a new term and passed the limit
-			if last_term != term and self.has_passed_chunk_limit(True):
+			if last_term != term and self.has_passed_chunk_limit():
 				self.block_merge_setup(merge_postings)
 				# reset temporary postings
 				merge_postings = OrderedDict()
-			self.num_stored_items += 1
+
+			self.num_stored_items += len(postings.split(":"))
 
 			if term in merge_postings:
 				merge_postings[term] += f";{postings}"
 			else:
 				merge_postings[term] = postings
-	
+
 			# store last term
 			last_term = term
 
@@ -346,6 +374,12 @@ class Indexer:
 		with gzip.open(f"{self.INDEXER_DIR}indexer.txt.gz",'wt') as f:
 			for term, freq_pos in self.indexer.items():
 				f.write(f"{term};{str(freq_pos[0])};{str(freq_pos[1])}\n")
+	
+
+	def store_doc_mapping(self):
+		with gzip.open(f"{self.INDEXER_DIR}doc_mapping.txt.gz",'wt') as f:
+			for _id, review_id in self.doc_mapping.items():
+				f.write(f"{_id};{review_id}\n")
 
 
 	def store_config(self):

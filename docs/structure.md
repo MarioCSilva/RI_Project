@@ -6,11 +6,6 @@ This class has the main goal to index all terms found on each dataset, and write
 
     Starts off by parsing the file and obtain all tokens, recurring to the Tokenizer Class, as well as its documents references and, optionally, the positions on those documents.
 
-- Calculate rankings:
-
-    If the ranking system is VS
-    If the ranking system is 
-    
 - Write postings to temporary block files (terms sorted alphabetically):
 
     While the parse and indexing process is taking place, every time a threshold of memory used (RAM), or a certain number of tokens processed has been reached, it begins the write operations of the postings on disk through temporary blocks. The postings that are being written are all ordered alphabetically.
@@ -26,6 +21,11 @@ This class has the main goal to index all terms found on each dataset, and write
 - Store indexer data structure in a file:
 
     This structure is a dictionary with the terms as key, and as value, the document frequency, as well as the line the term is written on the partition file.
+
+- Store Document Mapper structure in a file:
+
+    This structure is a dictionary with a compact incremental ID, using all ASCII characters, as key, and the review ID as value.
+    This allows to use much less space in disk because it shortens the ID's to the smallest value possible in order to occupy less bytes.
 
 - Store configuration metadata for the search engine:
     Once the merge has been completed, a new directory and consequently a new file is created on disk containing metadata that will be useful for the Search Engine, such as which filters were used, ranking strategy choosen and others.
@@ -84,7 +84,7 @@ This task is computed simultaneously by 4 processes that are launched with this 
 
 - To do so, this module starts by reading a configuration  containing all relevant characteristics for the indexing process(usage of filters, ranking strategy, indexing schema,..).
 
-- After that it loads the indexer data structure, which is a dictionary with every term indexed as key and for the value it has the idf associated to the term if the ranking system is Vector Space or the term frequency if it is the BM25, and it also has the line that the postings list of this term was written.
+- After that it loads the indexer data structure, which is a dictionary with every term indexed as key and for the value it has the idf associated to the term and it also has the line that the postings list of this term was written.
 
 - To get the document scores of a term, first it is necessary to get partition file by comparing the term with the first word of a partition file and the last word to find which partition file the term is indexed. After that, it needs to get the postings list of the term, which is done by reading every line until the line that is obtained from the indexer data structure mentioned before. Then it calculates the documents scores based on the ranking system.
 

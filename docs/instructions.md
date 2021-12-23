@@ -46,4 +46,5 @@ python3 main.py
 
 ## Important Notes
 - For this assignment the `Map Reduce` option  was not updated, thus it is only working for the purposes of the first assignment
+
 - The results of the queries using BM25 and Vector Space ( with lnc.ltc indexing schema) are stored in the `music_bm25` and `music_lncltc` folders, respetively,inside the `search_engine`subfolder.

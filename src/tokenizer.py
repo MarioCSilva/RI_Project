@@ -23,14 +23,11 @@ class Tokenizer:
 
         self.stop_words_file = None
 
-        # regex normalizer
-        self.rgx = re.compile("(\w[\w']*\w|\w)")
-        
         # initialize Stop Words and Porter Filter if needed
         self.init_min_len_filter(length=min_length)
         self.init_porter_filter()
-        self.init_stop_words_filter(stopwords_file=stopwords_file)
-    
+        self.init_stop_words_filter(stop_words_file=stopwords_file)
+
 
     def init_min_len_filter(self, length):
         if self.min_length_filter:
@@ -44,13 +41,13 @@ class Tokenizer:
             self.ps = SnowballStemmer("english", ignore_stopwords=True)
 
 
-    def init_stop_words_filter(self, stopwords_file):
+    def init_stop_words_filter(self, stop_words_file):
         if self.stop_words_filter:
             self.stop_words = set()
             try:
-                with open(stopwords_file, 'r') as stop_words_file:
-                    self.stop_words_file = stop_words_file
-                    for line in stop_words_file:
+                self.stop_words_file = stop_words_file
+                with open(stop_words_file, 'r') as f:
+                    for line in f:
                         self.stop_words |= set(line.split(","))
             except FileNotFoundError:
                 logging.info("Stop words file not found.")
@@ -60,9 +57,9 @@ class Tokenizer:
     def tokenize(self, input_string) -> list():
         final_tokens = defaultdict(list)
 
-        tokens = re.findall(self.rgx, input_string)
+        tokens = input_string.split()
 
-        tokens = [re.sub("[^0-9a-z'_-]+"," ", token.lower()).split() for token in tokens]
+        tokens = [re.sub("[^0-9a-z']+"," ", token.lower()).split() for token in tokens]
         tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
 
         for index, token in enumerate(tokens):

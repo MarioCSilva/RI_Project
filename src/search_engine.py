@@ -17,12 +17,12 @@ class Search_Engine:
         self.INDEXER_DIR = f"{self.INDEX_DIR}/indexer_dict/"
         self.PARTITION_DIR = f"{self.INDEX_DIR}/partition_index/"
         self.CONFIG_DIR = f"{self.INDEX_DIR}/config/"
-
         self.QUERY_DIR = f"{self.INDEX_DIR}/search_engine/"
 
         self.check_dir_exist(self.QUERY_DIR)
 
         self.indexer = defaultdict(lambda: [0, 0])
+        self.doc_mapping = {}
 
         self.store_positions = False
         self.index_schema = None
@@ -31,7 +31,9 @@ class Search_Engine:
         self.queries_file = queries_file
 
         self.load_indexer()
-        
+
+        self.load_doc_mapping()
+
         total_prepare_time = time.time() - prepare_search_time
 
         self.get_statistics(total_prepare_time=total_prepare_time)
@@ -39,7 +41,6 @@ class Search_Engine:
         queries_times = self.search_queries()
 
         self.get_statistics(queries_times=queries_times)
-
 
 
     def check_dir_exist(self, directory):
@@ -107,6 +108,22 @@ class Search_Engine:
             term = indexer_line[0]
             self.indexer[term][0], self.indexer[term][1] = \
                 float(indexer_line[1]), int(indexer_line[2])
+    
+
+    """ Load documents id mapping data structure into memory """
+    def load_doc_mapping(self):
+        try:
+            indexer_dir = os.listdir(self.INDEXER_DIR)
+            if len(indexer_dir) < 0:
+                return
+            doc_mapping_file = gzip.open(f"{self.INDEXER_DIR}doc_mapping.txt.gz", 'rt')
+        except FileNotFoundError as e:
+            logging.error("Could not find document mapping on disk. Please run the indexer first.")
+            sys.exit(0)
+
+        for line in doc_mapping_file:
+            doc_mapping_line = line[:-1].split(';')
+            self.doc_mapping[doc_mapping_line[0]] = doc_mapping_line[1]
 
 
     def get_partition_file(self, term):
@@ -143,15 +160,15 @@ class Search_Engine:
                 doc_weights = {}
 
                 for doc_weight_str in term_postings:
-                    doc_weight_lst = doc_weight_str.split(':')
-                    doc, weight = doc_weight_lst[0], float(doc_weight_lst[1])
+                    doc_weight = doc_weight_str.split(':')
+                    doc, weight = self.doc_mapping[doc_weight[0]], float(doc_weight[1])
                     doc_weights[doc] = weight
                 return idf, doc_weights
 
             doc_scores = {}
             for doc_score in term_postings:
                 doc_id, score = doc_score.split(":")
-                doc_scores[doc_id] = float(score)
+                doc_scores[self.doc_mapping[doc_id]] = float(score)
             return doc_scores
 
 
@@ -198,7 +215,7 @@ class Search_Engine:
                 scores[doc] *= cos_norm_value
 
         return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
-    
+
 
     def handle_query_bm25(self, query):
         scores = defaultdict(lambda: 0)
@@ -215,7 +232,7 @@ class Search_Engine:
 
             for doc_id, score in doc_scores.items():
                 scores[doc_id] += score * tf
-        
+
         return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
 
 
@@ -242,14 +259,14 @@ class Search_Engine:
             num_queries += 1
 
             start_time = time.time()
-            
+
             query = query[:-1] if query[-1] == "\n" else query
             results_query = self.handle_query_vs(query)if self.ranking == "VS"\
                 else self.handle_query_bm25(query)
-            
+
             queries_total_time += time.time() - start_time
 
             self.write_results_to_file(queries_results_file, query, results_query)
-        
+
         queries_average_time = queries_total_time / num_queries
         return queries_total_time, queries_average_time, num_queries
