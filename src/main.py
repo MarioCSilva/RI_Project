@@ -55,7 +55,7 @@ class Main:
         arg_parser.add_argument('-b', nargs=1, type=int, default=[0.75])
         arg_parser.add_argument('-schema', nargs=1, type=str, default=["lnc.ltc"])
         arg_parser.add_argument('-boost', action='store_true')
-        arg_parser.add_argument('-window_size', nargs=1, type=int, default=[5])
+        arg_parser.add_argument('-window_size', nargs=1, type=int, default=[6])
 
         try:
             args = arg_parser.parse_args()

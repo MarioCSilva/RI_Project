@@ -66,7 +66,7 @@ class Search_Engine:
         for k, metrics in self.metrics.items():
             data.append([k, mean(metrics['precision']), mean(metrics['recall']),\
                 mean(metrics['f_measure']), mean(metrics['avg_precision']), mean(metrics['ndcg'])])
-        print("Mean Values Over All Queries" + " With Boost" if self.boost else "")
+        print(self.ranking+": Mean Values Over All Queries" + " With Boost" if self.boost else "")
         print(tabulate(data, headers=headers))
 
 
@@ -257,7 +257,7 @@ class Search_Engine:
                 scores[doc] *= cos_norm_value
         
         if self.boost:
-            scores = self.boost_function(scores, term_doc_pos)
+            scores = self.boost_function(scores, term_doc_pos, tokenized_query)
 
         return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:50]
 
@@ -294,14 +294,17 @@ class Search_Engine:
 
 
     def boost_function(self, scores, term_doc_pos, tokenized_query):
+        if self.ranking == "VS":
+            boost = 0.5
+        else:
+            boost = 2
+
         for doc in scores:
             windows = {}
-
             for term, doc_pos in term_doc_pos.items():
                 if doc in doc_pos:
                     for pos in doc_pos[doc]:
                         windows[int(pos)] = []
-
             for init_pos in windows:
                 for term, doc_pos in term_doc_pos.items():
                     if doc in doc_pos:
@@ -310,14 +313,13 @@ class Search_Engine:
                             term_win_pos = pos - init_pos
                             if 0 <= term_win_pos <= self.window_size:
                                 windows[init_pos].append((term, term_win_pos))
-            
+
             for window in windows.values():
-                boost = 1
                 if len(window) == 1:
                     continue
                 
                 unique = set()
-                [unique.add(x) for x, y in window]
+                [unique.add(x) for x, _ in window]
                 
                 if len(unique) == 1:
                     continue
@@ -328,14 +330,14 @@ class Search_Engine:
                 terms = list(tokenized_query.keys())
 
                 for term, pos in window:
-                    pos_offset += abs(pos - tokenized_query[term][0])
+                    pos_offset += self.window_size - abs(pos - tokenized_query[term][0])
                     if lst_index != -1 and terms.index(term) - lst_index == 1:
-                        pos_offset -= 0.05
+                        pos_offset += self.window_size
                     lst_index = terms.index(term)
-
+                
                 pos_offset += (len(tokenized_query) - len(unique)) * (self.window_size - 1)
-
                 scores[doc] += boost / pos_offset
+
         return scores
 
 
