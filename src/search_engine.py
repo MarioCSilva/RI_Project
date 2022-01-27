@@ -6,13 +6,14 @@ import sys
 import logging
 from tokenizer import Tokenizer
 from functools import lru_cache
-from math import log10, sqrt
+from math import log10, sqrt, log2
 import time
-import tabulate
+from tabulate import tabulate
+from statistics import mean
 
 
 class Search_Engine:
-    def __init__(self, index_dir, queries_file, window_size):
+    def __init__(self, index_dir, queries_file, boost, window_size):
         prepare_search_time = time.time()
 
         self.INDEX_DIR = f"../{index_dir}"
@@ -28,6 +29,7 @@ class Search_Engine:
         self.store_positions = False
         self.index_schema = None
         self.tokenizer = self.read_config()
+        self.boost = boost
         self.window_size = window_size
 
         self.queries_file = queries_file
@@ -40,15 +42,13 @@ class Search_Engine:
         self.metrics = {}
         for k in self.top_k:
             self.metrics[k] = {'precision': [], 'recall': [],\
-                'f_measure': [], 'avg_precision': []}
+                'f_measure': [], 'avg_precision': [], 'ndcg' : []}
 
         total_prepare_time = time.time() - prepare_search_time
 
-        self.get_statistics(total_prepare_time=total_prepare_time)
-
         queries_times = self.search_queries()
 
-        self.get_statistics(queries_times=queries_times)
+        self.get_statistics(total_prepare_time, queries_times)
 
 
     def check_dir_exist(self, directory):
@@ -56,12 +56,18 @@ class Search_Engine:
             os.mkdir(directory)
 
 
-    def get_statistics(self, total_prepare_time=None, queries_times=None):
-        if total_prepare_time:
-            print(f"e) Time to start up an index searcher, after the final index is written to disk: {total_prepare_time:.2f} seconds")
-        if queries_times:
-            print(f"Total time to handle {queries_times[2]} queries: {queries_times[0]:.2f} seconds")
-            print(f"Average time to handle a single query: {queries_times[1]:.2f} seconds")
+    def get_statistics(self, total_prepare_time, queries_times):
+        print(f"e) Time to start up an index searcher, after the final index is written to disk: {total_prepare_time:.2f} seconds")
+        print(f"Total time to handle {queries_times[2]} queries: {queries_times[0]:.2f} seconds")
+        print(f"Average time to handle a single query: {queries_times[1]:.2f} seconds")
+
+        headers = ["Top K", "Precision", "Recall", "F-Measure", "Average Precision", "NDCG"]
+        data = []
+        for k, metrics in self.metrics.items():
+            data.append([k, mean(metrics['precision']), mean(metrics['recall']),\
+                mean(metrics['f_measure']), mean(metrics['avg_precision']), mean(metrics['ndcg'])])
+        print("Mean Values Over All Queries" + " With Boost" if self.boost else "")
+        print(tabulate(data, headers=headers))
 
 
     """ Load configurations used during indexation """
@@ -158,7 +164,7 @@ class Search_Engine:
 
         if idf:
             partition_file = self.get_partition_file(term)
-            logging.info(f"Postings of '{term}' are indexed in the partition file '{partition_file}'")
+            # logging.info(f"Postings of '{term}' are indexed in the partition file '{partition_file}'")
 
             try:
                 partition_file = gzip.open(partition_file, 'rt')
@@ -250,7 +256,8 @@ class Search_Engine:
             for doc in scores.keys():
                 scores[doc] *= cos_norm_value
         
-        scores = self.boost_function(scores, term_doc_pos)
+        if self.boost:
+            scores = self.boost_function(scores, term_doc_pos)
 
         return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:50]
 
@@ -279,16 +286,14 @@ class Search_Engine:
 
             for doc_id, score in doc_scores.items():
                 scores[doc_id] += score * tf
-        
-        scores = self.boost_function(scores, term_doc_pos, tokenized_query)
+
+        if self.boost:
+            scores = self.boost_function(scores, term_doc_pos, tokenized_query)
 
         return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:50]
 
 
     def boost_function(self, scores, term_doc_pos, tokenized_query):
-        print(tokenized_query)
-        
-
         for doc in scores:
             windows = {}
 
@@ -304,15 +309,33 @@ class Search_Engine:
                             pos = int(pos)
                             term_win_pos = pos - init_pos
                             if 0 <= term_win_pos <= self.window_size:
-                                windows[pos].append((term, term_win_pos))
-            boost = 1
+                                windows[init_pos].append((term, term_win_pos))
+            
             for window in windows.values():
+                boost = 1
                 if len(window) == 1:
                     continue
-                pos_offset = 0
-                for term, pos in window:
-                   pos_offset += abs(pos - tokenized_query[term][0])
+                
+                unique = set()
+                [unique.add(x) for x, y in window]
+                
+                if len(unique) == 1:
+                    continue
 
+                window.sort(key = lambda x: x[1])
+                lst_index = -1
+                pos_offset = 1
+                terms = list(tokenized_query.keys())
+
+                for term, pos in window:
+                    pos_offset += abs(pos - tokenized_query[term][0])
+                    if lst_index != -1 and terms.index(term) - lst_index == 1:
+                        pos_offset -= 0.05
+                    lst_index = terms.index(term)
+
+                pos_offset += (len(tokenized_query) - len(unique)) * (self.window_size - 1)
+
+                scores[doc] += boost / pos_offset
         return scores
 
 
@@ -359,31 +382,35 @@ class Search_Engine:
 
     def get_metrics(self, query, results_query):
         relevant_docs = self.get_relevant_docs(query)
-        print(relevant_docs)
-        print(results_query)
-
-        headers = ["Top K", "Precision", "Recall", "F-Measure", "Average Precision"]
+        top_rel_docs = list(relevant_docs.items())
+        
+        headers = ["Top K", "Precision", "Recall", "F-Measure", "Average Precision", "NDCG"]
         data = []
 
         for k in self.top_k:
-            TP, avg_precision = 0, 0
-
+            TP, avg_precision, dcg, ideal_dcg = 0, 0, 0, 0
             for num_doc, doc in enumerate(results_query[:k]):
+                if not num_doc:
+                    ideal_dcg = top_rel_docs[num_doc][1]
+                else:
+                    ideal_dcg += top_rel_docs[num_doc][1] / log2(num_doc + 1)
+
                 if doc in relevant_docs:
+                    if not num_doc:
+                        dcg = relevant_docs[doc]
+                    else:
+                        dcg += relevant_docs[doc] / log2(num_doc + 1)
+
                     TP += 1
                     avg_precision += TP / (num_doc + 1)
 
-            FP = FN = k - TP
-            if not TP + FP:
-                precision = recall = 0
-            else:
-                # precision and recall have the same denominator
-                precision = recall = TP / (TP + FP)
+            ndcg = dcg / ideal_dcg
 
-            if not precision:
-                f_measure = 0
-            else:
-                f_measure = 2 * precision * recall / (precision + recall)
+            FP = FN = k - TP
+            # precision and recall have the same denominator
+            precision = recall = TP / (TP + FP) if TP + FP else 0
+
+            f_measure = 2 * precision * recall / (precision + recall) if precision else 0
 
             avg_precision = avg_precision / (num_doc + 1)
 
@@ -391,9 +418,11 @@ class Search_Engine:
             self.metrics[k]['recall'].append(recall)
             self.metrics[k]['f_measure'].append(f_measure)
             self.metrics[k]['avg_precision'].append(avg_precision)
-            data.append([k, precision, recall, f_measure, avg_precision])
+            self.metrics[k]['ndcg'].append(ndcg)
+            data.append([k, precision, recall, f_measure, avg_precision, ndcg])
 
-        print(tabulate(data, headers))
+        print(f"Metrics for Q:{query}")
+        print(f"{tabulate(data, headers)}\n")
 
 
     def get_relevant_docs(self, query):
@@ -402,7 +431,7 @@ class Search_Engine:
         found_query = False
         
         for line in f:
-            line = line[:-1]
+            line = line.strip()
             if 'Q:' in line:
                 if line.split(':')[-1] == query:
                     found_query = True
@@ -411,3 +440,4 @@ class Search_Engine:
                     return relevant_docs
                 doc, relevancy = line.split()
                 relevant_docs[doc] = int(relevancy)
+        return relevant_docs

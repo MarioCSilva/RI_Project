@@ -12,7 +12,7 @@ class Main:
         if not self.search:
             self.indexer = Indexer(*indexer_args)
         else:
-            self.search_engine = Search_Engine(self.index_dir, self.queries_file, self.window_size)
+            self.search_engine = Search_Engine(self.index_dir, self.queries_file, self.boost, self.window_size)
 
 
     def usage(self):
@@ -54,7 +54,8 @@ class Main:
         arg_parser.add_argument('-k1', nargs=1, type=int, default=[1.2])
         arg_parser.add_argument('-b', nargs=1, type=int, default=[0.75])
         arg_parser.add_argument('-schema', nargs=1, type=str, default=["lnc.ltc"])
-        arg_parser.add_argument('-window_size', nargs=1, type=int, default=[6])
+        arg_parser.add_argument('-boost', action='store_true')
+        arg_parser.add_argument('-window_size', nargs=1, type=int, default=[5])
 
         try:
             args = arg_parser.parse_args()
@@ -78,6 +79,7 @@ class Main:
             sys.exit(1)
 
         self.queries_file = args.queries_file[0]
+        self.boost = args.boost
         self.window_size = args.window_size[0]
     
         return self.index_dir, filename, args.min_length, min_len, args.porter,\
