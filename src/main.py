@@ -12,7 +12,7 @@ class Main:
         if not self.search:
             self.indexer = Indexer(*indexer_args)
         else:
-            self.search_engine = Search_Engine(self.index_dir, self.queries_file)
+            self.search_engine = Search_Engine(self.index_dir, self.queries_file, self.window_size)
 
 
     def usage(self):
@@ -50,10 +50,11 @@ class Main:
         arg_parser.add_argument('-mp', action='store_true')
         arg_parser.add_argument('-positions', action='store_true')
         arg_parser.add_argument('-queries_file', nargs=1, default=['../queries.txt'])
-        arg_parser.add_argument('-ranking', nargs=1, choices=['BM25', 'VS'], default=['VS'])
+        arg_parser.add_argument('-ranking', nargs=1, choices=['BM25', 'VS'], default=['BM25'])
         arg_parser.add_argument('-k1', nargs=1, type=int, default=[1.2])
         arg_parser.add_argument('-b', nargs=1, type=int, default=[0.75])
         arg_parser.add_argument('-schema', nargs=1, type=str, default=["lnc.ltc"])
+        arg_parser.add_argument('-window_size', nargs=1, type=int, default=[6])
 
         try:
             args = arg_parser.parse_args()
@@ -77,9 +78,11 @@ class Main:
             sys.exit(1)
 
         self.queries_file = args.queries_file[0]
+        self.window_size = args.window_size[0]
     
         return self.index_dir, filename, args.min_length, min_len, args.porter,\
-            args.stopwords, args.stopwords_file[0], args.mp, args.positions, args.ranking[0], schema, args.k1[0], args.b[0]
+            args.stopwords, args.stopwords_file[0], args.mp, args.positions,\
+            args.ranking[0], schema, args.k1[0], args.b[0]
 
 
 if __name__ == "__main__":

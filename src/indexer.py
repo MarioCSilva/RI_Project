@@ -314,11 +314,20 @@ class Indexer:
 					# BM25 final weight calculation
 					final_str = ''
 					docs_tf = [doc_tf.split(':') for doc_tf in postings.split(';')]
-					for doc_id, tf in docs_tf:
+					for doc_inf in docs_tf:
+						if not self.store_positions:
+							doc_id, tf = doc_inf
+						else:
+							doc_id, tf, pos = doc_inf
 						B = (1 - self.b) + self.b * self.docs_length[doc_id] / self.average_doc_len
 						tf_norm = int(tf) / B
 						c = round(idf * (self.k1 + 1) * tf_norm / (self.k1 + tf_norm), 6)
-						final_str += f"{doc_id}:{c};"
+						
+						if not self.store_positions:
+							final_str += f"{doc_id}:{c};"
+						else:
+							final_str += f"{doc_id}:{c}:{pos};"
+
 					f.write(f"{final_str}\n")
 
 

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from email.policy import default
 import os
 import gzip
 import sys
@@ -7,10 +8,11 @@ from tokenizer import Tokenizer
 from functools import lru_cache
 from math import log10, sqrt
 import time
+import tabulate
 
 
 class Search_Engine:
-    def __init__(self, index_dir, queries_file):
+    def __init__(self, index_dir, queries_file, window_size):
         prepare_search_time = time.time()
 
         self.INDEX_DIR = f"../{index_dir}"
@@ -23,16 +25,22 @@ class Search_Engine:
 
         self.indexer = defaultdict(lambda: [0, 0])
         self.doc_mapping = {}
-
         self.store_positions = False
         self.index_schema = None
         self.tokenizer = self.read_config()
+        self.window_size = window_size
 
         self.queries_file = queries_file
 
         self.load_indexer()
 
         self.load_doc_mapping()
+        self.top_k = [10, 20, 50]
+
+        self.metrics = {}
+        for k in self.top_k:
+            self.metrics[k] = {'precision': [], 'recall': [],\
+                'f_measure': [], 'avg_precision': []}
 
         total_prepare_time = time.time() - prepare_search_time
 
@@ -160,23 +168,34 @@ class Search_Engine:
 
             term_postings = self.read_file_line(partition_file, partition_line).split(';')[:-1]
             partition_file.close()
+            
+            doc_pos = {}
 
             if self.ranking == "VS":
                 doc_weights = {}
 
                 for doc_weight_str in term_postings:
-                    doc_weight = doc_weight_str.split(':')
-                    doc, weight = self.doc_mapping[doc_weight[0]], float(doc_weight[1])
+                    doc_info = doc_weight_str.split(':')
+                    if not self.store_positions:
+                        doc, weight = self.doc_mapping[doc_info[0]], float(doc_info[1])
+                    else:
+                        doc, weight, pos = self.doc_mapping[doc_info[0]], float(doc_info[1]), doc_info[2]
                     doc_weights[doc] = weight
+                    doc_pos[doc] = pos[1:-1].split(', ')
                 # In Vector Space, we need to retrieve also the Idf of the term
-                return idf, doc_weights
+                return idf, doc_weights, doc_pos
 
             # BM25
             doc_scores = {}
             for doc_score in term_postings:
-                doc_id, score = doc_score.split(":")
+                doc_info = doc_score.split(":")
+                if not self.store_positions:
+                    doc_id, score = doc_info
+                else:
+                    doc_id, score, pos = doc_info
                 doc_scores[self.doc_mapping[doc_id]] = float(score)
-            return doc_scores
+                doc_pos[self.doc_mapping[doc_id]] = pos[1:-1].split(', ')
+            return doc_scores, doc_pos
 
 
     def handle_query_vs(self, query):
@@ -196,6 +215,7 @@ class Search_Engine:
             use_idf = False
 
         cos_norm_value = 0
+        term_doc_pos = {}
 
         for term, positions in tokenized_query.items():
             search_result = self.search_term(term)
@@ -204,7 +224,10 @@ class Search_Engine:
                 print(f"Term '{term}' not indexed.")
                 continue
 
-            idf, doc_weights = search_result
+            idf, doc_weights, doc_pos = search_result
+            if self.store_positions:
+                term_doc_pos[term] = doc_pos
+           
             tf = len(positions)
 
             if self.index_schema[4] == 'l':
@@ -226,8 +249,10 @@ class Search_Engine:
 
             for doc in scores.keys():
                 scores[doc] *= cos_norm_value
+        
+        scores = self.boost_function(scores, term_doc_pos)
 
-        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
+        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:50]
 
 
     def handle_query_bm25(self, query):
@@ -239,9 +264,13 @@ class Search_Engine:
         scores = defaultdict(lambda: 0)
 
         tokenized_query = self.tokenizer.tokenize(query)
-
+        term_doc_pos = {}
         for term, positions in tokenized_query.items():
-            doc_scores = self.search_term(term)
+            doc_scores, doc_pos = self.search_term(term)
+            
+            if self.store_positions:
+                term_doc_pos[term] = doc_pos
+                
             tf = len(positions)
 
             if not doc_scores:
@@ -250,8 +279,41 @@ class Search_Engine:
 
             for doc_id, score in doc_scores.items():
                 scores[doc_id] += score * tf
+        
+        scores = self.boost_function(scores, term_doc_pos, tokenized_query)
 
-        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
+        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:50]
+
+
+    def boost_function(self, scores, term_doc_pos, tokenized_query):
+        print(tokenized_query)
+        
+
+        for doc in scores:
+            windows = {}
+
+            for term, doc_pos in term_doc_pos.items():
+                if doc in doc_pos:
+                    for pos in doc_pos[doc]:
+                        windows[int(pos)] = []
+
+            for init_pos in windows:
+                for term, doc_pos in term_doc_pos.items():
+                    if doc in doc_pos:
+                        for pos in doc_pos[doc]:
+                            pos = int(pos)
+                            term_win_pos = pos - init_pos
+                            if 0 <= term_win_pos <= self.window_size:
+                                windows[pos].append((term, term_win_pos))
+            boost = 1
+            for window in windows.values():
+                if len(window) == 1:
+                    continue
+                pos_offset = 0
+                for term, pos in window:
+                   pos_offset += abs(pos - tokenized_query[term][0])
+
+        return scores
 
 
     def write_results_to_file(self, queries_results_file, query, results_query):
@@ -283,12 +345,69 @@ class Search_Engine:
             start_time = time.time()
 
             query = query[:-1] if query[-1] == "\n" else query
-            results_query = self.handle_query_vs(query)if self.ranking == "VS"\
+            results_query = self.handle_query_vs(query) if self.ranking == "VS"\
                 else self.handle_query_bm25(query)
 
             queries_total_time += time.time() - start_time
 
             self.write_results_to_file(queries_results_file, query, results_query)
+            self.get_metrics(query, results_query)
 
         queries_average_time = queries_total_time / num_queries
         return queries_total_time, queries_average_time, num_queries
+
+
+    def get_metrics(self, query, results_query):
+        relevant_docs = self.get_relevant_docs(query)
+        print(relevant_docs)
+        print(results_query)
+
+        headers = ["Top K", "Precision", "Recall", "F-Measure", "Average Precision"]
+        data = []
+
+        for k in self.top_k:
+            TP, avg_precision = 0, 0
+
+            for num_doc, doc in enumerate(results_query[:k]):
+                if doc in relevant_docs:
+                    TP += 1
+                    avg_precision += TP / (num_doc + 1)
+
+            FP = FN = k - TP
+            if not TP + FP:
+                precision = recall = 0
+            else:
+                # precision and recall have the same denominator
+                precision = recall = TP / (TP + FP)
+
+            if not precision:
+                f_measure = 0
+            else:
+                f_measure = 2 * precision * recall / (precision + recall)
+
+            avg_precision = avg_precision / (num_doc + 1)
+
+            self.metrics[k]['precision'].append(precision)
+            self.metrics[k]['recall'].append(recall)
+            self.metrics[k]['f_measure'].append(f_measure)
+            self.metrics[k]['avg_precision'].append(avg_precision)
+            data.append([k, precision, recall, f_measure, avg_precision])
+
+        print(tabulate(data, headers))
+
+
+    def get_relevant_docs(self, query):
+        f = open('queries_relevance.txt')
+        relevant_docs = {}
+        found_query = False
+        
+        for line in f:
+            line = line[:-1]
+            if 'Q:' in line:
+                if line.split(':')[-1] == query:
+                    found_query = True
+            elif found_query:
+                if not line:
+                    return relevant_docs
+                doc, relevancy = line.split()
+                relevant_docs[doc] = int(relevancy)
