@@ -62,7 +62,8 @@ class Tokenizer:
         tokens = [re.sub("[^0-9a-z']+"," ", token.lower()).split() for token in tokens]
         tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
 
-        for index, token in enumerate(tokens):
+        index = 0
+        for token in tokens:
             token_size = len(token)
             if (not self.min_length_filter or token_size >= self.min_length) \
                 and token_size <= self.max_length \
@@ -71,4 +72,5 @@ class Tokenizer:
                         final_tokens[self.ps.stem(token)].append(index)
                     else:
                         final_tokens[token].append(index)
+                    index += 1
         return final_tokens
