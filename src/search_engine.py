@@ -9,7 +9,7 @@ from functools import lru_cache
 from math import log10, sqrt, log2
 import time
 from tabulate import tabulate
-from statistics import mean
+from statistics import mean, median
 
 
 class Search_Engine:
@@ -57,17 +57,19 @@ class Search_Engine:
 
 
     def get_statistics(self, total_prepare_time, queries_times):
-        print(f"e) Time to start up an index searcher, after the final index is written to disk: {total_prepare_time:.2f} seconds")
+        print(f"Time to start up an index searcher, after the final index is written to disk: {total_prepare_time:.2f} seconds")
         print(f"Total time to handle {queries_times[2]} queries: {queries_times[0]:.2f} seconds")
-        print(f"Average time to handle a single query: {queries_times[1]:.2f} seconds")
+        print(f"Average time to handle a single query: {queries_times[1]:.2f} seconds\n")
+        print(f"Average Query Throughput: {1/queries_times[1]:.2f} queries/second")
+        print(f"Median Query Latency: {queries_times[3]:.2f} seconds\n")
 
-        headers = ["Top K", "Precision", "Recall", "F-Measure", "Average Precision", "NDCG"]
+        headers = ["Top K", "Precision", "Recall", "F-Measure", "Avg. Precision", "NDCG"]
         data = []
         for k, metrics in self.metrics.items():
             data.append([k, mean(metrics['precision']), mean(metrics['recall']),\
                 mean(metrics['f_measure']), mean(metrics['avg_precision']), mean(metrics['ndcg'])])
-        print(self.ranking+": Mean Values Over All Queries" + " With Boost" if self.boost else "")
-        print(tabulate(data, headers=headers))
+        print(self.ranking+": Mean Values Over All Queries" + (" With Boost" if self.boost else ""))
+        print(tabulate(data, headers=headers, tablefmt='github'))
 
 
     """ Load configurations used during indexation """
@@ -294,10 +296,7 @@ class Search_Engine:
 
 
     def boost_function(self, scores, term_doc_pos, tokenized_query):
-        if self.ranking == "VS":
-            boost = 0.5
-        else:
-            boost = 2
+        max_window_boost = mean(scores.values())
 
         for doc in scores:
             windows = {}
@@ -314,31 +313,89 @@ class Search_Engine:
                             if 0 <= term_win_pos <= self.window_size:
                                 windows[init_pos].append((term, term_win_pos))
 
+            total_w_boosts = []
             for window in windows.values():
                 if len(window) == 1:
                     continue
-                
+
                 unique = set()
                 [unique.add(x) for x, _ in window]
-                
+
                 if len(unique) == 1:
                     continue
 
                 window.sort(key = lambda x: x[1])
                 lst_index = -1
-                pos_offset = 1
                 terms = list(tokenized_query.keys())
+                w_boost = 1
 
                 for term, pos in window:
-                    pos_offset += self.window_size - abs(pos - tokenized_query[term][0])
-                    if lst_index != -1 and terms.index(term) - lst_index == 1:
-                        pos_offset += self.window_size
-                    lst_index = terms.index(term)
-                
-                pos_offset += (len(tokenized_query) - len(unique)) * (self.window_size - 1)
-                scores[doc] += boost / pos_offset
+                    w_boost += abs(pos - tokenized_query[term][0])
+                    term_index = terms.index(term)
+                    if lst_index != -1:
+                        term_direction = term_index - lst_index
+                        if term_direction > 1 or term_direction == 0:
+                            w_boost += self.window_size / 5
+                        if term_direction < 0:
+                            w_boost += self.window_size / 4
+                    lst_index = term_index
 
+                w_boost += self.window_size * 2 / len(window)
+                w_boost += (len(tokenized_query) - len(unique)) * (self.window_size)
+
+                total_w_boosts.append(w_boost)
+
+            if total_w_boosts:
+                scores[doc] += max_window_boost / min(total_w_boosts)
         return scores
+
+
+# Total time to handle 15 queries: 7.84 seconds
+# Average time to handle a single query: 0.52 seconds
+# Average Query Throughput: 1.91 queries/second
+# Median Query Latency: 0.28 seconds
+# BM25: Mean Values Over All Queries
+#   Top K    Precision    Recall    F-Measure    Average Precision      NDCG
+# -------  -----------  --------  -----------  -------------------  --------
+#      10     0.86      0.118459     0.207714             0.836706  0.750858
+#      20     0.766667  0.210028     0.328444             0.732444  0.713823
+#      50     0.605333  0.411407     0.48744              0.539773  0.67222
+
+
+# Total time to handle 15 queries: 15.88 seconds
+# Average time to handle a single query: 1.06 seconds
+# Average Query Throughput: 0.94 queries/second
+# Median Query Latency: 1.12 seconds
+# BM25: Mean Values Over All Queries With Boost
+#   Top K    Precision    Recall    F-Measure    Avg. Precision      NDCG
+# -------  -----------  --------  -----------  ----------------  --------
+#      10     0.86      0.118173     0.20728           0.832862  0.750627
+#      20     0.77      0.211262     0.330246          0.733582  0.711687
+#      50     0.594667  0.403652     0.478481          0.533248  0.665441
+
+
+# Total time to handle 15 queries: 8.70 seconds
+# Average time to handle a single query: 0.58 seconds
+# Average Query Throughput: 1.72 queries/second
+# Median Query Latency: 0.36 seconds
+# VS: Mean Values Over All Queries
+#   Top K    Precision    Recall    F-Measure    Avg. Precision      NDCG
+# -------  -----------  --------  -----------  ----------------  --------
+#      10     0.94      0.130497     0.228615          0.919725  0.839183
+#      20     0.93      0.258418     0.40288           0.91066   0.833954
+#      50     0.850667  0.585557     0.689928          0.818631  0.84357
+
+
+# Total time to handle 15 queries: 17.12 seconds
+# Average time to handle a single query: 1.14 seconds
+# Average Query Throughput: 0.88 queries/second
+# Median Query Latency: 1.25 seconds
+# VS: Mean Values Over All Queries With Boost
+#   Top K    Precision    Recall    F-Measure    Avg. Precision      NDCG
+# -------  -----------  --------  -----------  ----------------  --------
+#      10     0.94      0.130497     0.228615          0.920836  0.85067
+#      20     0.926667  0.257325     0.401234          0.907728  0.839027
+#      50     0.846667  0.581814     0.686051          0.816521  0.846974
 
 
     def write_results_to_file(self, queries_results_file, query, results_query):
@@ -362,7 +419,7 @@ class Search_Engine:
         filename = f"{self.QUERY_DIR}queries_results_{self.ranking}{index_schema}.txt"
         queries_results_file = open(filename, 'w+')
 
-        queries_total_time, num_queries = 0, 0
+        queries_times, num_queries = [], 0
 
         for query in queries_file:
             num_queries += 1
@@ -373,20 +430,22 @@ class Search_Engine:
             results_query = self.handle_query_vs(query) if self.ranking == "VS"\
                 else self.handle_query_bm25(query)
 
-            queries_total_time += time.time() - start_time
+            queries_times.append(time.time() - start_time)
 
             self.write_results_to_file(queries_results_file, query, results_query)
             self.get_metrics(query, results_query)
 
+        queries_total_time = sum(queries_times)
+        median_query_latency = median(queries_times)
         queries_average_time = queries_total_time / num_queries
-        return queries_total_time, queries_average_time, num_queries
+        return queries_total_time, queries_average_time, num_queries, median_query_latency
 
 
     def get_metrics(self, query, results_query):
         relevant_docs = self.get_relevant_docs(query)
         top_rel_docs = list(relevant_docs.items())
         
-        headers = ["Top K", "Precision", "Recall", "F-Measure", "Average Precision", "NDCG"]
+        headers = ["Top K", "Precision", "Recall", "F-Measure", "Avg. Precision", "NDCG"]
         data = []
 
         for k in self.top_k:
@@ -427,7 +486,7 @@ class Search_Engine:
             data.append([k, precision, recall, f_measure, avg_precision, ndcg])
 
         print(f"Metrics for Q:{query}")
-        print(f"{tabulate(data, headers)}\n")
+        print(f"{tabulate(data, headers, tablefmt='github')}\n")
 
 
     def get_relevant_docs(self, query):

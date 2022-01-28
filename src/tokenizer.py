@@ -38,7 +38,7 @@ class Tokenizer:
 
     def init_porter_filter(self):
         if self.porter_filter:
-            self.ps = SnowballStemmer("english", ignore_stopwords=True)
+            self.ps = SnowballStemmer("english", ignore_stopwords=False)
 
 
     def init_stop_words_filter(self, stop_words_file):
