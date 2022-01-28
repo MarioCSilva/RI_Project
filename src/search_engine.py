@@ -408,9 +408,12 @@ class Search_Engine:
 
             ndcg = dcg / ideal_dcg
 
-            FP = FN = k - TP
-            # precision and recall have the same denominator
-            precision = recall = TP / (TP + FP) if TP + FP else 0
+            if TP:
+                precision = TP / k
+                recall = TP / len(relevant_docs)
+            else:
+                precision = 0
+                recall = 0
 
             f_measure = 2 * precision * recall / (precision + recall) if precision else 0
 
