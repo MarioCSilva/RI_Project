@@ -59,7 +59,7 @@ class Tokenizer:
 
         tokens = input_string.split()
 
-        tokens = [re.sub("[^0-9a-z']+"," ", token.lower()).split() for token in tokens]
+        tokens = [re.sub("[^0-9a-z]+"," ", token.lower()).split() for token in tokens]
         tokens = [token for sublist in tokens for token in sublist if not token.isdigit()]
 
         index = 0

@@ -57,18 +57,20 @@ class Search_Engine:
 
 
     def get_statistics(self, total_prepare_time, queries_times):
-        print(f"Time to start up an index searcher, after the final index is written to disk: {total_prepare_time:.2f} seconds")
-        print(f"Total time to handle {queries_times[2]} queries: {queries_times[0]:.2f} seconds")
-        print(f"Average time to handle a single query: {queries_times[1]:.2f} seconds\n")
-        print(f"Average Query Throughput: {1/queries_times[1]:.2f} queries/second")
-        print(f"Median Query Latency: {queries_times[3]:.2f} seconds\n")
+        print("Results for " + self.ranking + (" With Boost\n" if self.boost else " Without Boost\n"))
 
+        print(f"Time to start up an index searcher, after the final index is written to disk: {total_prepare_time:.2f} seconds\n")
+        print(f"Total time to handle {queries_times[2]} queries: {queries_times[0]:.2f} seconds\n")
+        print(f"Average time to handle a single query: {queries_times[1]:.2f} seconds\n")
+        print(f"Average Query Throughput: {1/queries_times[1]:.2f} queries/second\n")
+        print(f"Median Query Latency: {queries_times[3]:.2f} seconds\n")
+        print("Mean Values Over All Queries:\n")
+        
         headers = ["Top K", "Precision", "Recall", "F-Measure", "Avg. Precision", "NDCG"]
         data = []
         for k, metrics in self.metrics.items():
             data.append([k, mean(metrics['precision']), mean(metrics['recall']),\
                 mean(metrics['f_measure']), mean(metrics['avg_precision']), mean(metrics['ndcg'])])
-        print(self.ranking+": Mean Values Over All Queries" + (" With Boost" if self.boost else ""))
         print(tabulate(data, headers=headers, tablefmt='github'))
 
 
@@ -124,7 +126,7 @@ class Search_Engine:
             term = indexer_line[0]
             self.indexer[term][0], self.indexer[term][1] = \
                 float(indexer_line[1]), int(indexer_line[2])
-    
+
 
     """ Load documents id mapping data structure into memory """
     def load_doc_mapping(self):
@@ -176,7 +178,7 @@ class Search_Engine:
 
             term_postings = self.read_file_line(partition_file, partition_line).split(';')[:-1]
             partition_file.close()
-            
+
             doc_pos = {}
 
             if self.ranking == "VS":
@@ -235,7 +237,7 @@ class Search_Engine:
             idf, doc_weights, doc_pos = search_result
             if self.store_positions:
                 term_doc_pos[term] = doc_pos
-           
+
             tf = len(positions)
 
             if self.index_schema[4] == 'l':
@@ -251,13 +253,13 @@ class Search_Engine:
 
             for doc, doc_weight in doc_weights.items():
                 scores[doc] += doc_weight * weight
-                
+
         if self.index_schema[6] == "c" and cos_norm_value:
             cos_norm_value = 1 / sqrt(cos_norm_value)
 
             for doc in scores.keys():
                 scores[doc] *= cos_norm_value
-        
+
         if self.boost:
             scores = self.boost_function(scores, term_doc_pos, tokenized_query)
 
@@ -276,10 +278,10 @@ class Search_Engine:
         term_doc_pos = {}
         for term, positions in tokenized_query.items():
             doc_scores, doc_pos = self.search_term(term)
-            
+
             if self.store_positions:
                 term_doc_pos[term] = doc_pos
-                
+
             tf = len(positions)
 
             if not doc_scores:
@@ -296,7 +298,7 @@ class Search_Engine:
 
 
     def boost_function(self, scores, term_doc_pos, tokenized_query):
-        max_window_boost = mean(scores.values())
+        max_window_boost = min(scores.values()) if self.ranking == "VS" else (max(scores.values()) * 1.5)
 
         for doc in scores:
             windows = {}
@@ -315,19 +317,14 @@ class Search_Engine:
 
             total_w_boosts = []
             for window in windows.values():
-                if len(window) == 1:
-                    continue
-
                 unique = set()
                 [unique.add(x) for x, _ in window]
 
-                if len(unique) == 1:
-                    continue
+                w_boost = (len(tokenized_query) - len(unique)) * (self.window_size) + 1
 
                 window.sort(key = lambda x: x[1])
                 lst_index = -1
                 terms = list(tokenized_query.keys())
-                w_boost = 1
 
                 for term, pos in window:
                     w_boost += abs(pos - tokenized_query[term][0])
@@ -340,62 +337,13 @@ class Search_Engine:
                             w_boost += self.window_size / 4
                     lst_index = term_index
 
-                w_boost += self.window_size * 2 / len(window)
-                w_boost += (len(tokenized_query) - len(unique)) * (self.window_size)
-
                 total_w_boosts.append(w_boost)
 
             if total_w_boosts:
-                scores[doc] += max_window_boost / min(total_w_boosts)
+                scores[doc] += (max_window_boost / min(total_w_boosts)) if self.ranking == "VS"\
+                    else (max_window_boost / mean(total_w_boosts) / len(total_w_boosts))
+
         return scores
-
-
-# Total time to handle 15 queries: 7.84 seconds
-# Average time to handle a single query: 0.52 seconds
-# Average Query Throughput: 1.91 queries/second
-# Median Query Latency: 0.28 seconds
-# BM25: Mean Values Over All Queries
-#   Top K    Precision    Recall    F-Measure    Average Precision      NDCG
-# -------  -----------  --------  -----------  -------------------  --------
-#      10     0.86      0.118459     0.207714             0.836706  0.750858
-#      20     0.766667  0.210028     0.328444             0.732444  0.713823
-#      50     0.605333  0.411407     0.48744              0.539773  0.67222
-
-
-# Total time to handle 15 queries: 15.88 seconds
-# Average time to handle a single query: 1.06 seconds
-# Average Query Throughput: 0.94 queries/second
-# Median Query Latency: 1.12 seconds
-# BM25: Mean Values Over All Queries With Boost
-#   Top K    Precision    Recall    F-Measure    Avg. Precision      NDCG
-# -------  -----------  --------  -----------  ----------------  --------
-#      10     0.86      0.118173     0.20728           0.832862  0.750627
-#      20     0.77      0.211262     0.330246          0.733582  0.711687
-#      50     0.594667  0.403652     0.478481          0.533248  0.665441
-
-
-# Total time to handle 15 queries: 8.70 seconds
-# Average time to handle a single query: 0.58 seconds
-# Average Query Throughput: 1.72 queries/second
-# Median Query Latency: 0.36 seconds
-# VS: Mean Values Over All Queries
-#   Top K    Precision    Recall    F-Measure    Avg. Precision      NDCG
-# -------  -----------  --------  -----------  ----------------  --------
-#      10     0.94      0.130497     0.228615          0.919725  0.839183
-#      20     0.93      0.258418     0.40288           0.91066   0.833954
-#      50     0.850667  0.585557     0.689928          0.818631  0.84357
-
-
-# Total time to handle 15 queries: 17.12 seconds
-# Average time to handle a single query: 1.14 seconds
-# Average Query Throughput: 0.88 queries/second
-# Median Query Latency: 1.25 seconds
-# VS: Mean Values Over All Queries With Boost
-#   Top K    Precision    Recall    F-Measure    Avg. Precision      NDCG
-# -------  -----------  --------  -----------  ----------------  --------
-#      10     0.94      0.130497     0.228615          0.920836  0.85067
-#      20     0.926667  0.257325     0.401234          0.907728  0.839027
-#      50     0.846667  0.581814     0.686051          0.816521  0.846974
 
 
     def write_results_to_file(self, queries_results_file, query, results_query):
@@ -444,7 +392,7 @@ class Search_Engine:
     def get_metrics(self, query, results_query):
         relevant_docs = self.get_relevant_docs(query)
         top_rel_docs = list(relevant_docs.items())
-        
+
         headers = ["Top K", "Precision", "Recall", "F-Measure", "Avg. Precision", "NDCG"]
         data = []
 
@@ -493,7 +441,7 @@ class Search_Engine:
         f = open('queries_relevance.txt')
         relevant_docs = {}
         found_query = False
-        
+
         for line in f:
             line = line.strip()
             if 'Q:' in line:

@@ -2,23 +2,23 @@
 
 ## Vector Space without Boost Function
 
-Time to start up an index searcher, after the final index is written to disk: 1.63 seconds
+Time to start up an index searcher, after the final index is written to disk: 1.77 seconds
 
-Total time to handle 15 queries: 8.52 seconds
+Total time to handle 15 queries: 10.08 seconds
 
-Average time to handle a single query: 0.57 seconds
+Average time to handle a single query: 0.67 seconds
 
-Average Query Throughput: 1.76 queries/second
+Average Query Throughput: 1.49 queries/second
 
-Median Query Latency: 0.34 seconds
+Median Query Latency: 0.39 seconds
 
 Mean Values Over All Queries:
 
 |   Top K |   Precision |   Recall |   F-Measure |   Avg. Precision |     NDCG |
 |---------|-------------|----------|-------------|------------------|----------|
-|      10 |    0.94     | 0.130497 |    0.228615 |         0.919725 | 0.839183 |
-|      20 |    0.93     | 0.258418 |    0.40288  |         0.91066  | 0.833954 |
-|      50 |    0.850667 | 0.585557 |    0.689928 |         0.818631 | 0.84357  |
+|      10 |    0.98     | 0.136045 |    0.238361 |         0.97428  | 0.866399 |
+|      20 |    0.983333 | 0.27303  |    0.425819 |         0.972697 | 0.875603 |
+|      50 |    0.894667 | 0.615518 |    0.725592 |         0.870808 | 0.884981 |
 
 
 ## Vector Space with Boost Function
@@ -37,48 +37,48 @@ Mean Values Over All Queries:
 
 |   Top K |   Precision |   Recall |   F-Measure |   Avg. Precision |     NDCG |
 |---------|-------------|----------|-------------|------------------|----------|
-|      10 |    0.94     | 0.130497 |    0.228615 |         0.920836 | 0.85067  |
-|      20 |    0.926667 | 0.257325 |    0.401234 |         0.907728 | 0.839027 |
-|      50 |    0.846667 | 0.581814 |    0.686051 |         0.816521 | 0.846974 |
+|      10 |    0.986667 | 0.136889 |    0.23986  |         0.982066 | 0.876623 |
+|      20 |    0.983333 | 0.27303  |    0.425819 |         0.973863 | 0.882996 |
+|      50 |    0.894667 | 0.615152 |    0.725379 |         0.87201  | 0.89108  |
 
 
 ## BM25 without Boost Function
 
-Time to start up an index searcher, after the final index is written to disk: 1.62 seconds
+Time to start up an index searcher, after the final index is written to disk: 1.60 seconds
 
-Total time to handle 15 queries: 7.74 seconds
+Total time to handle 15 queries: 7.55 seconds
 
-Average time to handle a single query: 0.52 seconds
+Average time to handle a single query: 0.50 seconds
 
-Average Query Throughput: 1.94 queries/second
+Average Query Throughput: 1.99 queries/second
 
-Median Query Latency: 0.29 seconds
+Median Query Latency: 0.26 seconds
 
 Mean Values Over All Queries:
 
 |   Top K |   Precision |   Recall |   F-Measure |   Avg. Precision |     NDCG |
 |---------|-------------|----------|-------------|------------------|----------|
-|      10 |    0.86     | 0.118459 |    0.207714 |         0.836706 | 0.750858 |
-|      20 |    0.766667 | 0.210028 |    0.328444 |         0.732444 | 0.713823 |
-|      50 |    0.605333 | 0.411407 |    0.48744  |         0.539773 | 0.67222  |
+|      10 |    0.886667 | 0.122181 |    0.214248 |         0.862246 | 0.761467 |
+|      20 |    0.79     | 0.216159 |    0.33817  |         0.75241  | 0.726889 |
+|      50 |    0.625333 | 0.426095 |    0.504385 |         0.552623 | 0.688719 |
 
 
 ## BM25 with Boost Function
 
-Time to start up an index searcher, after the final index is written to disk: 1.60 seconds
+Time to start up an index searcher, after the final index is written to disk: 1.47 seconds
 
-Total time to handle 15 queries: 15.85 seconds
+Total time to handle 15 queries: 40.64 seconds
 
-Average time to handle a single query: 1.06 seconds
+Average time to handle a single query: 2.71 seconds
 
-Average Query Throughput: 0.95 queries/second
+Average Query Throughput: 0.37 queries/second
 
-Median Query Latency: 1.12 seconds
+Median Query Latency: 2.85 seconds
 
 Mean Values Over All Queries:
 
 |   Top K |   Precision |   Recall |   F-Measure |   Avg. Precision |     NDCG |
 |---------|-------------|----------|-------------|------------------|----------|
-|      10 |    0.86     | 0.118173 |    0.20728  |         0.832862 | 0.750627 |
-|      20 |    0.77     | 0.211262 |    0.330246 |         0.733582 | 0.711687 |
-|      50 |    0.594667 | 0.403652 |    0.478481 |         0.533248 | 0.665441 |
+|      10 |    0.96     | 0.133202 |    0.233385 |         0.947225 | 0.805324 |
+|      20 |    0.913333 | 0.25178  |    0.393266 |         0.892151 | 0.791467 |
+|      50 |    0.725333 | 0.493483 |    0.584507 |         0.667357 | 0.744143 |
