@@ -27,11 +27,14 @@ class Main:
             \n\t-mp <Map Reduce>\
             \n\t-positions <Store term's positions in postings>\
             \n\t-search <Search Engine to Get Queries Results>\
-            \n\t-ranking <Store term's positions in postings>\
+            \n\t-ranking <Ranking Algorithm:str> Choices: BM25 or VS\
             \n\t-queries_file <File Name (Path) for Queries:str>\
             \n\t-k1 <k1 value for BM25:float>\
             \n\t-b <B value for BM25:float>\
-            \n\t-schema <Indexing Schema:str> Example: lnc.ltc")
+            \n\t-schema <Indexing Schema:str> Example: lnc.ltc\
+            \n\t-boost <Use Ranking Boost function>\
+            \n\t-window_size <Window Size to be used on Boost Function: int>\
+            ")
 
 
     def check_arguments(self):
@@ -46,11 +49,11 @@ class Main:
         arg_parser.add_argument('-porter', action='store_true')
         arg_parser.add_argument('-stopwords', action='store_true')
         arg_parser.add_argument('-stopwords_file', nargs=1, default=['stopwords.txt'])
-        arg_parser.add_argument('-search', action='store_true')
         arg_parser.add_argument('-mp', action='store_true')
         arg_parser.add_argument('-positions', action='store_true')
-        arg_parser.add_argument('-queries_file', nargs=1, default=['../queries.txt'])
+        arg_parser.add_argument('-search', action='store_true')
         arg_parser.add_argument('-ranking', nargs=1, choices=['BM25', 'VS'], default=['BM25'])
+        arg_parser.add_argument('-queries_file', nargs=1, default=['../queries.txt'])
         arg_parser.add_argument('-k1', nargs=1, type=int, default=[1.2])
         arg_parser.add_argument('-b', nargs=1, type=int, default=[0.75])
         arg_parser.add_argument('-schema', nargs=1, type=str, default=["lnc.ltc"])
