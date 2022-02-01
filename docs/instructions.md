@@ -16,32 +16,34 @@ python3 main.py
 
 - Additional arguments:
 ```
-    -index_dir <Directory name for indexation:str>
-    -filename <File Name (Path) for data set:str>
-    -min_length <Minimum Length Filter>
-    -length <Length for Minimum Length Filter:int>
-    -porter <Porter Stemmer Filter>
-    -stopwords <Stop Words Filter>
-    -stopwords_file <Stop Words File>
-    -mp <Map Reduce>
-    -positions <Store term's positions in postings>
-    -search <Search Engine to Get Queries Results>
-    -ranking <Ranking Algorithm:str>
-    -queries_file <File Name (Path) for Queries:str>
-    -k1 <k1 value for BM25:float>
-    -b <B value for BM25:float>
-    -schema <Indexing Schema:str> Example: lnc.ltc
+    -index_dir <Directory name for indexation:str>            
+    -filename <File Name (Path) for data set:str>            
+    -min_length <Minimum Length Filter>            
+    -length <Length for Minimum Length Filter:int>            
+    -porter <Porter Stemmer Filter>            
+    -stopwords <Stop Words Filter>            
+    -stopwords_file <Stop Words File>            
+    -mp <Map Reduce>            
+    -positions <Store term's positions in postings>            
+    -search <Search Engine to Get Queries Results>            
+    -ranking <Ranking Algorithm:str> Choices: BM25 or VS           
+    -queries_file <File Name (Path) for Queries:str>            
+    -k1 <k1 value for BM25:float>            
+    -b <B value for BM25:float>            
+    -schema <Indexing Schema:str> Example: lnc.ltc            
+    -boost <Use Ranking Boost function>            
+    -window_size <Window Size to be used on Boost Function: int>  
 ```
 
 - For a more complex running example consider the following one. 
   - Indexing:
     ```bash
-    python3 main.py -index_dir example_games_lncltc -schema lnc.ltc -min -len 3
+    python3 main.py -index_dir example -stopwords -min_len -len 3 -positions
     ```
 
   - Searching:
     ```bash
-    python3 main.py -index_dir example_games_lncltc -search -queries_file ../queries.txt
+    python3 main.py -index_dir example -search -boost
     ```
 
 ## Important Notes
