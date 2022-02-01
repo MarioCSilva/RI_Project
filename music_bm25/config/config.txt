@@ -1,0 +1,5 @@
+ranking:BM25
+store_positions
+min_length_filter:3
+stop_words_filter
+stop_words_file:stopwords.txt
