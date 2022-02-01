@@ -1,0 +1,568 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-8.1.9">
+    
+    
+      
+        <title>Structure - Indexation and Search System</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.2b4465f4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.e6a45f82.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#02a6f2">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#class-indexer" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Indexation and Search System" class="md-header__button md-logo" aria-label="Indexation and Search System" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Indexation and Search System
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Structure
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/MarioCSilva/RI_project/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Indexation and Search System
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Indexation and Search System" class="md-nav__button md-logo" aria-label="Indexation and Search System" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Indexation and Search System
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/MarioCSilva/RI_project/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Indexation and Search System
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authors/" class="md-nav__link">
+        Authors
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boost_statistics/" class="md-nav__link">
+        Query Ranking Statistics for the 3rd Assignment
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../indexation_statistics/" class="md-nav__link">
+        Indexation Statistics for 1st Assignment
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../instructions/" class="md-nav__link">
+        Instructions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ranking_statistics/" class="md-nav__link">
+        Ranking Statistics for 2nd Assignment
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Structure
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Structure
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#class-indexer" class="md-nav__link">
+    Class Indexer:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#class-tokenizer" class="md-nav__link">
+    Class Tokenizer:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#class-map-reducer" class="md-nav__link">
+    Class Map Reducer:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#class-search-engine" class="md-nav__link">
+    Class Search Engine:
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#class-indexer" class="md-nav__link">
+    Class Indexer:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#class-tokenizer" class="md-nav__link">
+    Class Tokenizer:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#class-map-reducer" class="md-nav__link">
+    Class Map Reducer:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#class-search-engine" class="md-nav__link">
+    Class Search Engine:
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+<a href="https://github.com/MarioCSilva/RI_project/edit/master/docs/structure.md" title="Edit this page" class="md-content__button md-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+</a>
+
+
+  <h1>Structure</h1>
+
+<h2 id="class-indexer">Class Indexer:</h2>
+<p>This class has the main goal to index all terms found on each dataset, and write them to disk so they can be used for search queries later.</p>
+<ul>
+<li>
+<p>Parse file and index terms and postings:</p>
+<p>Starts off by parsing the file and obtain all tokens, recurring to the Tokenizer Class, as well as its documents references and, optionally, the positions on those documents.</p>
+</li>
+<li>
+<p>Write postings to temporary block files (terms sorted alphabetically):</p>
+<p>While the parse and indexing process is taking place, every time a threshold of memory used (RAM), or a certain number of tokens processed has been reached, it begins the write operations of the postings on disk through temporary blocks. The postings that are being written are all ordered alphabetically.</p>
+</li>
+<li>
+<p>Merge all temporary block files:</p>
+<p>Opens all temporary block files and reads line by line, finds the smallest (alphabetically) term, and adds it to an Ordered Dictionary structure of python. This way, the terms are sorted on the fly and then when writing a partition to disk, there is no need for sorting the terms since they were inserted in a correct order. This partition files are also compressed so occupy less space on disk.</p>
+</li>
+<li>
+<p>Delete all temporary block files.</p>
+<p>After the merge operation has been completed, the temporary blocks are no longer needed and thus deleted from the disk.</p>
+</li>
+<li>
+<p>Store indexer data structure in a file:</p>
+<p>This structure is a dictionary with the terms as key, and as value, the inverse document frequency (idf), as well as the line the term is written on the partition file.</p>
+</li>
+<li>
+<p>Store Document Mapper structure in a file:</p>
+<p>This structure is a dictionary with a compact incremental ID, using all ASCII characters, as key, and the review ID as value.
+This allows to use much less space in disk because it shortens the ID's to the smallest value possible in order to occupy less bytes.</p>
+</li>
+<li>
+<p>Store configuration metadata for the search engine:
+    Once the merge has been completed, a new directory and consequently a new file is created on disk containing metadata that will be useful for the Search Engine, such as which filters were used, ranking strategy choosen and others.</p>
+</li>
+</ul>
+<p>Note:</p>
+<p>The weights of the documents of the posting lists and the idf stored in the indexer data structure are rounded to 6 decimal cases to occupy less disk space.</p>
+<h2 id="class-tokenizer">Class Tokenizer:</h2>
+<p>This class will process the documents and return all terms found and the positions of these.</p>
+<ul>
+<li>
+<p>Allows the user of three type of filters, which can be used simultaneously. Those filters are the minimum length filter, the Stop Words Filter and Snowball Stemmer Filter. The minimum length filter allows only the processing of terms with the minimum length wished. The Stop Words filter has the goal of ignoring certain words, the Stop Words, such as articles, prepositions, pronouns or conjunctions. Finally, the Snowball Stemmer Filter is available to do the stemming of the terms, in other words, reduces words by removing its prefixes and suffixes.</p>
+</li>
+<li>
+<p>The tokenization function makes the all terms lower cased, then, it replaces any terms that contain only digits, and also unwanted symbols.</p>
+</li>
+<li>
+<p>Removes words bigger than 27 characters, because the longest word in the English language featuring alternating consonants and vowels and longest word word in Shakespeare's works has 27 characters.</p>
+</li>
+</ul>
+<h2 id="class-map-reducer">Class Map Reducer:</h2>
+<ul>
+<li>
+<p>The MapReducer class can be used as a way of indexing all terms in distributed manner using the Map Reduce Strategy. To do so there are three different stages: Mapping, Partitioning and Reducing.</p>
+</li>
+<li>
+<p>This class initializes a certain amount of processes, default is currently the number of CPUs of the machine the algorithm is running, and half of them are used to Map and other half to Reduce. It also uses queues to transfer information between processes.</p>
+</li>
+<li>
+<p>The Mapping stage:</p>
+<p>This stage collects all terms, the documents where those have appeared and its positions, and stores them in a dictionary of dictionaries as suggested bellow. This step is very important since it uses the tokenization function which can be a big CPU intensive function. Each mapping corresponds to the process of one document.</p>
+</li>
+</ul>
+<pre><code>{ term: { doc_id_1: [2,3,4] } }
+{ term: { doc_id_2: [6,4] } }
+</code></pre>
+<p>This task is computed simultaneously by 4 processes that are launched with this goal. Each output is sent to the next stage, the partitioning.</p>
+<ul>
+<li>
+<p>The Partitioning stage:</p>
+<p>This stage will only be executed once all processes have done the mapping function over all documents and returned the mapped terms. The objective of this step is to organize the mapped values for the reducing step to use them, in this case, we will group all documents on a single entry (term), as suggested bellow:</p>
+</li>
+</ul>
+<pre><code>{ term: { doc_id_1: [2,3,4], doc_id_2: [6,4] } }
+</code></pre>
+<ul>
+<li>
+<p>The Reducing Stage:</p>
+<p>The final stage, the Reducing, aims to compute the total number of occurrences of each term in all documents, by  organizing the data in the following structure.</p>
+</li>
+</ul>
+<pre><code>( term, { doc_id_1: [2,3,4], doc_id_2: [6,4] }, 5)
+</code></pre>
+<ul>
+<li>Overhead - there is only benefit of using map reducing when the cost of transferring information from processes is much smaller to the processing that is executed in the functions of mapping and reducing. It also should be used in different machines and not in a single computer to take the most benefit out of it. In our case, the overhead of creating processes and data transferring between processes could be too big for the operations that are executed. However we will analyze the results on the Statistics part.</li>
+</ul>
+<h2 id="class-search-engine">Class Search Engine:</h2>
+<ul>
+<li>
+<p>Once the Indexing of a certain dataset has finished, using the Search Engine module, it is possible to read a file with queries.</p>
+</li>
+<li>
+<p>To do so, this module starts by reading a configuration  containing all relevant characteristics for the indexing process(usage of filters, ranking strategy, indexing schema,..).</p>
+</li>
+<li>
+<p>After that it loads the indexer data structure, which is a dictionary with every term indexed as key and for the value it has the idf associated to the term and it also has the line that the postings list of this term was written.</p>
+</li>
+<li>
+<p>To get the document scores of a term, first it is necessary to get partition file by comparing the term with the first word of a partition file and the last word to find which partition file the term is indexed. After that, it needs to get the postings list of the term, which is done by reading every line until the line that is obtained from the indexer data structure mentioned before. Then it calculates the documents scores based on the ranking system.</p>
+</li>
+<li>
+<p>A Least Recently Used Cache is used to store, in our case, 50, the document scores associated to the term from the queries that are being processed. Ideally should be the most recurrent terms in all searchs queries, but since we don't have a query log to analyze this, it is a simple cache that stores the last ones.</p>
+</li>
+<li>
+<p>The results of the top 100 most relevant documents with the highest scores, acording to the ranking strategy that has been choosen from the user back on the indexation process, are written on the choosen indexing directoring, on the <code>search_engine</code> subfolder.</p>
+</li>
+</ul>
+
+              
+            </article>
+          </div>
+        </div>
+        
+          <a href="#" class="md-top md-icon" data-md-component="top" data-md-state="hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"/></svg>
+            Back to top
+          </a>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="../ranking_statistics/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Ranking Statistics for 2nd Assignment" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Ranking Statistics for 2nd Assignment
+            </div>
+          </div>
+        </a>
+      
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.top"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../assets/javascripts/workers/search.22074ed6.min.js"}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.960e086b.min.js"></script>
+      
+    
+  </body>
+</html>
