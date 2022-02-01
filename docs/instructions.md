@@ -1,13 +1,13 @@
 ## How to run
 
-Inside the RI_Project diretory:
+Inside the RI_Project directory:
 
 - Run the command to install requirements:
 ```bash
 pip3 install -r requirements.txt
 ```
 
-- Add to a diretory called `dataset` the files that contain the documents to be indexed.
+- Add to a directory called `dataset` the files that contain the documents to be indexed.
 
 - To run the project go to the `src` dir and simply execute (the default value of the file may be different so please consider indicating that parameter):
 ```bash
@@ -47,6 +47,6 @@ python3 main.py
     ```
 
 ## Important Notes
-- For this assignment the `Map Reduce` option  was not updated, thus it is only working for the purposes of the first assignment
+- For the second assignment the `Map Reduce` option  was not updated, thus it is only working for the purposes of the first assignment
 
-- The results of the queries using BM25 and Vector Space ( with lnc.ltc indexing schema) are stored in the `music_bm25` and `music_lncltc` folders, respetively,inside the `search_engine`subfolder.
+- The results of the queries using BM25 and Vector Space ( with lnc.ltc indexing schema) are stored in the `music_bm25` and `music_vs_lncltc` folders, respectively, inside the `search_engine` subfolder. To be able to obtain the same queries results, the arguments for the indexation process that were used can also be seen inside the `config` subfolder.

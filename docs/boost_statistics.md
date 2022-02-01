@@ -1,5 +1,8 @@
 # Query Ranking Statistics for the 3rd Assignment
 
+Note:
+The stop words filter and the minimum length of 3 filter were used for the indexations.
+
 ## Vector Space without Boost Function
 
 Time to start up an index searcher, after the final index is written to disk: 1.77 seconds
