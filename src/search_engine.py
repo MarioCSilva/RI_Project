@@ -263,7 +263,7 @@ class Search_Engine:
         if self.boost:
             scores = self.boost_function(scores, term_doc_pos, tokenized_query)
 
-        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:50]
+        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
 
 
     def handle_query_bm25(self, query):
@@ -294,7 +294,7 @@ class Search_Engine:
         if self.boost:
             scores = self.boost_function(scores, term_doc_pos, tokenized_query)
 
-        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:50]
+        return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:100]
 
 
     def boost_function(self, scores, term_doc_pos, tokenized_query):
@@ -364,7 +364,8 @@ class Search_Engine:
             sys.exit()
 
         index_schema = f'_{self.index_schema}' if self.index_schema else ''
-        filename = f"{self.QUERY_DIR}queries_results_{self.ranking}{index_schema}.txt"
+        boost = f'boosted_' if self.boost else ''
+        filename = f"{self.QUERY_DIR}{boost}queries_results_{self.ranking}{index_schema}.txt"
         queries_results_file = open(filename, 'w+')
 
         queries_times, num_queries = [], 0
@@ -386,6 +387,7 @@ class Search_Engine:
         queries_total_time = sum(queries_times)
         median_query_latency = median(queries_times)
         queries_average_time = queries_total_time / num_queries
+        
         return queries_total_time, queries_average_time, num_queries, median_query_latency
 
 
